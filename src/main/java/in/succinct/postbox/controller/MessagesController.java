@@ -1,11 +1,14 @@
 package in.succinct.postbox.controller;
 
+import com.venky.core.collections.SequenceSet;
 import com.venky.swf.controller.ModelController;
 import com.venky.swf.db.Database;
+import com.venky.swf.db.model.reflection.ModelReflector;
 import com.venky.swf.integration.api.HttpMethod;
 import com.venky.swf.path.Path;
 import com.venky.swf.plugins.background.core.AsyncTaskManagerFactory;
 import com.venky.swf.plugins.background.core.DbTask;
+import com.venky.swf.pm.DataSecurityFilter;
 import com.venky.swf.sql.Expression;
 import com.venky.swf.sql.Operator;
 import com.venky.swf.sql.Select;
@@ -36,11 +39,33 @@ public class MessagesController extends ModelController<Message> {
         @Override
         public void execute() {
             Message message = Database.getTable(Message.class).get(id);
+            if (Database.getInstance().getCurrentUser() == null){
+                Database.getInstance().open(message.getChannel().getCreatorUser());
+            }
             if (message != null){
                 message.destroy();
             }
         }
     }
+    
+    
+    protected Expression getWhereClause(){
+        
+        Expression where = super.getWhereClause();
+        
+        Select select = new Select().from(Channel.class);
+        select.where(new Expression(select.getPool(), ModelReflector.instance(Channel.class).getColumnDescriptor("CREATOR_USER_ID").getName(), Operator.EQ, getPath().getSessionUserId()));
+        SequenceSet<Long> ids = DataSecurityFilter.getIds(select.execute());
+        if (!ids.isEmpty()) {
+            where.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.IN, ids.toArray()));
+        }else {
+            where.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.EQ));
+        }
+        
+        return where;
+    }
+    
+    
     @SuppressWarnings("unchecked")
     public View post(String channelName){
         ensureIntegrationMethod(HttpMethod.POST);
@@ -53,13 +78,13 @@ public class MessagesController extends ModelController<Message> {
             JSONObject headers = new JSONObject();
             headers.putAll(getPath().getHeaders());
             message.setHeaders(headers.toString());
-            message.setExpiresAt(System.currentTimeMillis() + c.getExpiryMillis());
             message.save();
 
+            if (c.getExpiryMillis() > 0 ) {
+                service.schedule(new EvictionSchedule(message.getId()), c.getExpiryMillis(), TimeUnit.MILLISECONDS);
+            }
 
-            service.schedule(new EvictionSchedule(message.getId()),c.getExpiryMillis(), TimeUnit.MILLISECONDS);
-
-            return show(message);
+            return getIntegrationAdaptor().createStatusResponse(getPath(),null,"Message sent");
         }catch (Exception ex){
             throw new RuntimeException(ex);
         }
