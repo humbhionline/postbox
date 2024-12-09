@@ -15,8 +15,10 @@ import com.venky.swf.sql.Select;
 import com.venky.swf.views.View;
 import in.succinct.postbox.db.model.Channel;
 import in.succinct.postbox.db.model.Message;
+import in.succinct.postbox.db.model.User;
 import org.json.simple.JSONObject;
 
+import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -40,7 +42,10 @@ public class MessagesController extends ModelController<Message> {
         public void execute() {
             Message message = Database.getTable(Message.class).get(id);
             if (Database.getInstance().getCurrentUser() == null){
-                Database.getInstance().open(message.getChannel().getCreatorUser());
+                User user = Database.getTable(User.class).newRecord();
+                user.setProviderId(message.getChannel().getName());
+                user = Database.getTable(User.class).getRefreshed(user);
+                Database.getInstance().open(user);
             }
             if (message != null){
                 message.destroy();
@@ -54,7 +59,8 @@ public class MessagesController extends ModelController<Message> {
         Expression where = super.getWhereClause();
         
         Select select = new Select().from(Channel.class);
-        select.where(new Expression(select.getPool(), ModelReflector.instance(Channel.class).getColumnDescriptor("CREATOR_USER_ID").getName(), Operator.EQ, getPath().getSessionUserId()));
+        select.where(new Expression(select.getPool(), "NAME", Operator.LK,
+                getPath().getSessionUser().getRawRecord().getAsProxy(User.class).getProviderId() + "%"));
         SequenceSet<Long> ids = DataSecurityFilter.getIds(select.execute());
         if (!ids.isEmpty()) {
             where.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.IN, ids.toArray()));
@@ -74,7 +80,7 @@ public class MessagesController extends ModelController<Message> {
             Channel c = getChannel(channelName,false);
 
             message.setChannelId(c.getId());
-            message.setPayLoad(getPath().getInputStream());
+            message.setPayLoad(new InputStreamReader(getPath().getInputStream()));
             JSONObject headers = new JSONObject();
             headers.putAll(getPath().getHeaders());
             message.setHeaders(headers.toString());
@@ -122,4 +128,6 @@ public class MessagesController extends ModelController<Message> {
 
         return list(messageList,maxRecords == Select.MAX_RECORDS_ALL_RECORDS || messageList.size() < maxRecords);
     }
+    
+    
 }
