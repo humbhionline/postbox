@@ -28,14 +28,16 @@ public class MessageArchiveCheck implements Extension {
         if (!order.getState().isOpen()){
             Payments payments = request.getMessage().getOrder().getPayments();
             Bucket expected = new Bucket();
-            for (Item item :order.getItems()){
-                expected.increment(item.getItemQuantity().getSelected().getCount() * item.getPrice().getValue());
+            if (order.getState().isPaymentRequired()) {
+                for (Item item : order.getItems()) {
+                    expected.increment(item.getItemQuantity().getSelected().getCount() * item.getPrice().getValue());
+                }
             }
             
             Bucket paid  =new Bucket(0);
             for (Payment p : payments){
                 if (p.getStatus() == PaymentStatus.PAID) {
-                    if (p.getParams().getAmount() > 0){
+                    if (p.getParams() != null && p.getParams().getAmount() > 0){
                         paid.increment(p.getParams().getAmount());
                     }else {
                         paid.decrement(paid.doubleValue());
@@ -44,9 +46,9 @@ public class MessageArchiveCheck implements Extension {
                     }
                 }
             }
-            if (paid.doubleValue() >= expected.doubleValue() ){
-                message.setArchived(true);
-            }
+            message.setArchived(DoubleUtils.compareTo(expected.doubleValue() ,paid.doubleValue())<=0);
+        }else {
+            message.setArchived(false);
         }
         
         
