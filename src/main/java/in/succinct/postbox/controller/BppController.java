@@ -221,6 +221,7 @@ public class BppController extends Controller {
                     if (ObjectUtil.equals(context.getAction(),"status")) {
                         response =  new Request(StringUtil.read(message.getPayLoad()));
                         response.setObjectCreator(networkAdaptor.getObjectCreator(context.getDomain()));
+                        response.setContext(new Context(context.toString()));
                         response.getContext().setAction(responseAction);
                     }else {
                         throw new RuntimeException("Action %s not supported".formatted(action));
