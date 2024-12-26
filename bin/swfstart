@@ -12,7 +12,7 @@ then
   export swf_env="development"
 fi
 
-mvn clean -DskipTests=true package
+mvn -o clean -DskipTests=true package
 if [ "$debug" = "" ] 
 then
   export debug=y
