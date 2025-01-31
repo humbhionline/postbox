@@ -1,7 +1,6 @@
 package in.succinct.postbox.controller;
 
 import com.venky.core.collections.IgnoreCaseMap;
-import com.venky.core.io.ByteArrayInputStream;
 import com.venky.core.io.StringReader;
 import com.venky.core.security.Crypt;
 import com.venky.core.string.StringUtil;
@@ -51,7 +50,6 @@ import javax.crypto.KeyAgreement;
 import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -193,7 +191,7 @@ public class BppController extends Controller {
                         String channelId = getChannelId();
                         message.setChannelId(getChannel(channelId,true).getId());
                         message.setHeaders(new JSONObject(getHeaders()).toString());
-                        getRequest().getMessage().getOrder().setState(Order.Status.Created);
+                        getRequest().getMessage().getOrder().setStatus(Order.Status.Created);
                         getRequest().getMessage().getOrder().getPayments().get(0).setStatus(PaymentStatus.NOT_PAID);
                         message.setPayLoad(new StringReader(getRequest().getInner().toString()));
                         message.save();

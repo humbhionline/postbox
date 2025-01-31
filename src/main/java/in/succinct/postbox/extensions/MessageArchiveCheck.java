@@ -25,10 +25,10 @@ public class MessageArchiveCheck implements Extension {
         request.setObjectCreator(NetworkManager.getInstance().getNetworkAdaptor().getObjectCreator(request.getContext().getDomain()));
         
         Order order = request.getMessage().getOrder();
-        if (!order.getState().isOpen()){
+        if (!order.getStatus().isOpen()){
             Payments payments = request.getMessage().getOrder().getPayments();
             Bucket expected = new Bucket();
-            if (order.getState().isPaymentRequired()) {
+            if (order.getStatus().isPaymentRequired()) {
                 for (Item item : order.getItems()) {
                     expected.increment(item.getItemQuantity().getSelected().getCount() * item.getPrice().getValue());
                 }
