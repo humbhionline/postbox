@@ -1,8 +1,12 @@
 package in.succinct.postbox.extensions;
 
+import com.venky.cache.Cache;
+import com.venky.cache.UnboundedCache;
 import com.venky.core.collections.IgnoreCaseMap;
+import com.venky.core.io.StringReader;
 import com.venky.core.security.Crypt;
 import com.venky.core.string.StringUtil;
+import com.venky.core.util.Bucket;
 import com.venky.core.util.ObjectUtil;
 import com.venky.extension.Registry;
 import com.venky.swf.db.Database;
@@ -12,6 +16,10 @@ import com.venky.swf.integration.api.Call;
 import com.venky.swf.path._IPath;
 import com.venky.swf.plugins.background.core.TaskManager;
 import com.venky.swf.plugins.beckn.tasks.BppTask;
+import in.succinct.beckn.Fulfillment;
+import in.succinct.beckn.Fulfillment.FulfillmentStatus;
+import in.succinct.beckn.Order;
+import in.succinct.beckn.Order.Status;
 import in.succinct.beckn.Request;
 import in.succinct.json.JSONObjectWrapper;
 import in.succinct.postbox.db.model.Message;
@@ -43,11 +51,64 @@ public class MessageExtension extends ModelOperationExtension<Message> {
                     startsWith(user.getProviderId())){
                 throw new RuntimeException("Cannot modify message in some one else's channel.");
             }
+            updateOrderStatus(instance);
         }
         if (!instance.isArchived()) {
             Registry.instance().callExtensions(Message.class.getSimpleName() + ".archive.check", instance);
         }
     }
+    
+    private void updateOrderStatus(Message instance) {
+        Request request = new Request(StringUtil.read(instance.getPayLoad()));
+        request.setObjectCreator(NetworkManager.getInstance().getNetworkAdaptor().getObjectCreator(request.getContext().getDomain()));
+        
+        Order order = request.getMessage().getOrder();
+        if (order.getStatus() == null){
+            order.setStatus(Status.Created);
+        }
+        if (order.getStatus().isOpen()){
+            Map<FulfillmentStatus,Bucket> fulfillmentStatusBucketMap = new UnboundedCache<>() {
+                @Override
+                protected Bucket getValue(FulfillmentStatus key) {
+                    return new Bucket();
+                }
+            };
+            for (Fulfillment fulfillment : order.getFulfillments()) {
+                FulfillmentStatus fulfillmentStatus = fulfillment.getFulfillmentStatus();
+                if (fulfillmentStatus == null){
+                    fulfillmentStatus = FulfillmentStatus.Created;
+                    fulfillment.setFulfillmentStatus(fulfillmentStatus);
+                }
+                fulfillmentStatusBucketMap.get(fulfillmentStatus).increment();
+            }
+            if (fulfillmentStatusBucketMap.isEmpty()){
+                if (order.getStatus().ordinal() < Status.Awaiting_Acceptance.ordinal()) {
+                    order.setStatus(Status.Awaiting_Acceptance);
+                }
+            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Preparing).intValue() > 0){
+                if (order.getStatus().ordinal() < Status.Accepted.ordinal()) {
+                    order.setStatus(Status.Accepted);
+                }
+            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Prepared).intValue() > 0){
+                if (order.getStatus().ordinal() < Status.Prepared.ordinal()) {
+                    order.setStatus(Status.Prepared);
+                }
+            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.In_Transit).intValue() > 0){
+                if (order.getStatus().ordinal() < Status.In_Transit.ordinal()) {
+                    order.setStatus(Status.In_Transit);
+                }
+            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Completed).intValue() > 0){
+                if (order.getStatus().ordinal() < Status.Completed.ordinal()) {
+                    order.setStatus(Status.Completed);
+                }
+            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Cancelled).intValue() > 0){
+                if (order.getStatus().ordinal() < Status.Cancelled.ordinal()) {
+                    order.setStatus(Status.Cancelled);
+                }
+            }
+        }
+        instance.setPayLoad(new StringReader(request.getInner().toString()));
+        }
     
     /*
     private void sendOnStatus(Request request) {
