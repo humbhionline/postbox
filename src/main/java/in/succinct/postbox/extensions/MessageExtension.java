@@ -66,49 +66,51 @@ public class MessageExtension extends ModelOperationExtension<Message> {
         if (order.getStatus() == null){
             order.setStatus(Status.Created);
         }
-        if (order.getStatus().isOpen()){
-            Map<FulfillmentStatus,Bucket> fulfillmentStatusBucketMap = new UnboundedCache<>() {
-                @Override
-                protected Bucket getValue(FulfillmentStatus key) {
-                    return new Bucket();
-                }
-            };
-            for (Fulfillment fulfillment : order.getFulfillments()) {
-                FulfillmentStatus fulfillmentStatus = fulfillment.getFulfillmentStatus();
-                if (fulfillmentStatus == null){
-                    fulfillmentStatus = FulfillmentStatus.Created;
-                    fulfillment.setFulfillmentStatus(fulfillmentStatus);
-                }
-                fulfillmentStatusBucketMap.get(fulfillmentStatus).increment();
+        Map<FulfillmentStatus,Bucket> fulfillmentStatusBucketMap = new UnboundedCache<>() {
+            @Override
+            protected Bucket getValue(FulfillmentStatus key) {
+                return new Bucket();
             }
-            if (fulfillmentStatusBucketMap.isEmpty()){
-                if (order.getStatus().ordinal() < Status.Awaiting_Acceptance.ordinal()) {
-                    order.setStatus(Status.Awaiting_Acceptance);
-                }
-            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Preparing).intValue() > 0){
-                if (order.getStatus().ordinal() < Status.Accepted.ordinal()) {
-                    order.setStatus(Status.Accepted);
-                }
-            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Prepared).intValue() > 0){
-                if (order.getStatus().ordinal() < Status.Prepared.ordinal()) {
-                    order.setStatus(Status.Prepared);
-                }
-            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.In_Transit).intValue() > 0){
-                if (order.getStatus().ordinal() < Status.In_Transit.ordinal()) {
-                    order.setStatus(Status.In_Transit);
-                }
-            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Completed).intValue() > 0){
-                if (order.getStatus().ordinal() < Status.Completed.ordinal()) {
-                    order.setStatus(Status.Completed);
-                }
-            }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Cancelled).intValue() > 0){
-                if (order.getStatus().ordinal() < Status.Cancelled.ordinal()) {
-                    order.setStatus(Status.Cancelled);
-                }
+        };
+        for (Fulfillment fulfillment : order.getFulfillments()) {
+            FulfillmentStatus fulfillmentStatus = fulfillment.getFulfillmentStatus();
+            if (fulfillmentStatus == null){
+                fulfillmentStatus = FulfillmentStatus.Created;
+                fulfillment.setFulfillmentStatus(fulfillmentStatus);
+            }
+            fulfillmentStatusBucketMap.get(fulfillmentStatus).increment();
+            if (fulfillmentStatus.isOpen() && !order.getStatus().isOpen()){
+                order.setStatus(Status.Created); //Reset.
+            }
+        }
+        
+        if (fulfillmentStatusBucketMap.isEmpty()){
+            if (order.getStatus().ordinal() < Status.Awaiting_Acceptance.ordinal()) {
+                order.setStatus(Status.Awaiting_Acceptance);
+            }
+        }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Preparing).intValue() > 0){
+            if (order.getStatus().ordinal() < Status.Accepted.ordinal()) {
+                order.setStatus(Status.Accepted);
+            }
+        }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Prepared).intValue() > 0){
+            if (order.getStatus().ordinal() < Status.Prepared.ordinal()) {
+                order.setStatus(Status.Prepared);
+            }
+        }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.In_Transit).intValue() > 0){
+            if (order.getStatus().ordinal() < Status.In_Transit.ordinal()) {
+                order.setStatus(Status.In_Transit);
+            }
+        }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Completed).intValue() > 0){
+            if (order.getStatus().ordinal() < Status.Completed.ordinal()) {
+                order.setStatus(Status.Completed);
+            }
+        }else if (fulfillmentStatusBucketMap.get(FulfillmentStatus.Cancelled).intValue() > 0){
+            if (order.getStatus().ordinal() < Status.Cancelled.ordinal()) {
+                order.setStatus(Status.Cancelled);
             }
         }
         instance.setPayLoad(new StringReader(request.getInner().toString()));
-        }
+    }
     
     /*
     private void sendOnStatus(Request request) {
