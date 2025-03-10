@@ -16,6 +16,8 @@ import com.venky.swf.integration.api.Call;
 import com.venky.swf.path._IPath;
 import com.venky.swf.plugins.background.core.TaskManager;
 import com.venky.swf.plugins.beckn.tasks.BppTask;
+import in.succinct.beckn.Agent;
+import in.succinct.beckn.Contact;
 import in.succinct.beckn.Fulfillment;
 import in.succinct.beckn.Fulfillment.FulfillmentStatus;
 import in.succinct.beckn.Order;
@@ -109,7 +111,16 @@ public class MessageExtension extends ModelOperationExtension<Message> {
                 order.setStatus(Status.Cancelled);
             }
         }
+        Agent  agent  = order.getFulfillment().getAgent();
+        if (agent != null){
+            Contact contact  = agent.getContact();
+            if (contact != null){
+                instance.setDeliveryPartnerPhoneNumber(contact.getPhone());
+            }
+        }
+        
         instance.setPayLoad(new StringReader(request.getInner().toString()));
+        
     }
     
     /*

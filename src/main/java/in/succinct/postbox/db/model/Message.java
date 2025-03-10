@@ -32,6 +32,11 @@ public interface Message extends Model {
     void setOwnerId(Long id);
     User getOwner();
     
+    @IS_NULLABLE(value = false)
+    @Index
+    String getDeliveryPartnerPhoneNumber();
+    void setDeliveryPartnerPhoneNumber(String deliveryPartnerPhoneNumber);
+    
     @COLUMN_DEF(StandardDefault.BOOLEAN_FALSE)
     @Index
     boolean isArchived();
