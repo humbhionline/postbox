@@ -1,6 +1,7 @@
 package in.succinct.postbox.controller;
 
 import com.venky.core.collections.SequenceSet;
+import com.venky.core.util.ObjectUtil;
 import com.venky.swf.controller.ModelController;
 import com.venky.swf.db.Database;
 import com.venky.swf.db.model.reflection.ModelReflector;
@@ -9,6 +10,7 @@ import com.venky.swf.path.Path;
 import com.venky.swf.plugins.background.core.AsyncTaskManagerFactory;
 import com.venky.swf.plugins.background.core.DbTask;
 import com.venky.swf.pm.DataSecurityFilter;
+import com.venky.swf.sql.Conjunction;
 import com.venky.swf.sql.Expression;
 import com.venky.swf.sql.Operator;
 import com.venky.swf.sql.Select;
@@ -57,16 +59,26 @@ public class MessagesController extends ModelController<Message> {
     protected Expression getWhereClause(){
         
         Expression where = super.getWhereClause();
+        User user = getPath().getSessionUser().getRawRecord().getAsProxy(User.class);
         
-        Select select = new Select().from(Channel.class);
-        select.where(new Expression(select.getPool(), "NAME", Operator.LK,
-                getPath().getSessionUser().getRawRecord().getAsProxy(User.class).getProviderId() + "%"));
-        SequenceSet<Long> ids = DataSecurityFilter.getIds(select.execute());
-        if (!ids.isEmpty()) {
-            where.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.IN, ids.toArray()));
-        }else {
-            where.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.EQ));
+        Expression addl = new Expression(getReflector().getPool(), Conjunction.OR);
+        
+        String providerId = user.getProviderId();
+        if (!ObjectUtil.isVoid(providerId)) {
+            Select select = new Select().from(Channel.class);
+            select.where(new Expression(select.getPool(), "NAME", Operator.LK,
+                    getPath().getSessionUser().getRawRecord().getAsProxy(User.class).getProviderId() + "%"));
+            SequenceSet<Long> ids = DataSecurityFilter.getIds(select.execute());
+            if (!ids.isEmpty()) {
+                addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.IN, ids.toArray()));
+            } else {
+                addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.EQ));
+            }
         }
+        if(!ObjectUtil.isVoid(user.getPhoneNumber())){
+            addl.add(new Expression(getReflector().getPool(),"PHONE_NUMBER",Operator.EQ,user.getPhoneNumber()));
+        }
+        where.add(addl);
         
         return where;
     }
