@@ -60,25 +60,26 @@ public class MessagesController extends ModelController<Message> {
         
         Expression where = super.getWhereClause();
         User user = getPath().getSessionUser().getRawRecord().getAsProxy(User.class);
-        
-        Expression addl = new Expression(getReflector().getPool(), Conjunction.OR);
-        
-        String providerId = user.getProviderId();
-        if (!ObjectUtil.isVoid(providerId)) {
-            Select select = new Select().from(Channel.class);
-            select.where(new Expression(select.getPool(), "NAME", Operator.LK,
-                    getPath().getSessionUser().getRawRecord().getAsProxy(User.class).getProviderId() + "%"));
-            SequenceSet<Long> ids = DataSecurityFilter.getIds(select.execute());
-            if (!ids.isEmpty()) {
-                addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.IN, ids.toArray()));
-            } else {
-                addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.EQ));
+        if  (user.getId() > 1) {
+            Expression addl = new Expression(getReflector().getPool(), Conjunction.OR);
+            
+            String providerId = user.getProviderId();
+            if (!ObjectUtil.isVoid(providerId)) {
+                Select select = new Select().from(Channel.class);
+                select.where(new Expression(select.getPool(), "NAME", Operator.LK,
+                        getPath().getSessionUser().getRawRecord().getAsProxy(User.class).getProviderId() + "%"));
+                SequenceSet<Long> ids = DataSecurityFilter.getIds(select.execute());
+                if (!ids.isEmpty()) {
+                    addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.IN, ids.toArray()));
+                } else {
+                    addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.EQ));
+                }
             }
+            if (!ObjectUtil.isVoid(user.getPhoneNumber())) {
+                addl.add(new Expression(getReflector().getPool(), "DELIVERY_PARTNER_PHONE_NUMBER", Operator.EQ, user.getPhoneNumber()));
+            }
+            where.add(addl);
         }
-        if(!ObjectUtil.isVoid(user.getPhoneNumber())){
-            addl.add(new Expression(getReflector().getPool(),"PHONE_NUMBER",Operator.EQ,user.getPhoneNumber()));
-        }
-        where.add(addl);
         
         return where;
     }
