@@ -32,7 +32,7 @@ public interface Message extends Model {
     void setOwnerId(Long id);
     User getOwner();
     
-    @IS_NULLABLE(value = false)
+    @IS_NULLABLE(value = true)
     @Index
     String getDeliveryPartnerPhoneNumber();
     void setDeliveryPartnerPhoneNumber(String deliveryPartnerPhoneNumber);
