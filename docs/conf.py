@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'Becknify'
+project = 'PostBox'
 copyright = '2022, Venkatraman Mahadevan'
 author = 'Venkatraman Mahadevan'
 
