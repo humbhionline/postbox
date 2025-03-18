@@ -17,3 +17,4 @@ src/main/resources/scripts/node_modules/
 .keystore
 tmp/
 .index/
+docs/source/*.edtz

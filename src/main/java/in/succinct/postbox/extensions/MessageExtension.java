@@ -12,10 +12,12 @@ import com.venky.extension.Registry;
 import com.venky.swf.db.Database;
 import com.venky.swf.db.extensions.ModelOperationExtension;
 import com.venky.swf.db.model.CryptoKey;
+import com.venky.swf.exceptions.AccessDeniedException;
 import com.venky.swf.integration.api.Call;
 import com.venky.swf.path._IPath;
 import com.venky.swf.plugins.background.core.TaskManager;
 import com.venky.swf.plugins.beckn.tasks.BppTask;
+import com.venky.swf.plugins.collab.db.model.user.Phone;
 import in.succinct.beckn.Agent;
 import in.succinct.beckn.Contact;
 import in.succinct.beckn.Fulfillment;
@@ -49,9 +51,11 @@ public class MessageExtension extends ModelOperationExtension<Message> {
             instance.setOwnerId(instance.getChannel().getCreatorUserId());
         }else if (instance.isDirty()){
             User user = Database.getInstance().getCurrentUser().getRawRecord().getAsProxy(User.class);
-            if (!instance.getChannel().getName().
+            if (!ObjectUtil.isVoid(user.getProviderId()) && !instance.getChannel().getName().
                     startsWith(user.getProviderId())){
                 throw new RuntimeException("Cannot modify message in some one else's channel.");
+            }else if (!ObjectUtil.equals(user.getPhoneNumber(),instance.getDeliveryPartnerPhoneNumber())){
+                throw new AccessDeniedException();
             }
             updateOrderStatus(instance);
         }
@@ -115,7 +119,7 @@ public class MessageExtension extends ModelOperationExtension<Message> {
         if (agent != null){
             Contact contact  = agent.getContact();
             if (contact != null){
-                instance.setDeliveryPartnerPhoneNumber(contact.getPhone());
+                instance.setDeliveryPartnerPhoneNumber(Phone.sanitizePhoneNumber(contact.getPhone()));
             }
         }
         
