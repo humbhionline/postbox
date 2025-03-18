@@ -11,10 +11,11 @@ nohup.out
 database/
 .commit
 *.iml
-docs/_build
+#docs/_build
 src/main/resources/scripts/node_modules/
 /.gradle/
 .keystore
 tmp/
 .index/
 docs/source/*.edtz
+

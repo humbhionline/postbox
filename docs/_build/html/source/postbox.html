@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What is postbox? &mdash; Becknify 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Welcome to Postbox" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Becknify
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">What is postbox?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#features-of-postbox">Features of Postbox</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#updating-order-fulfillment-status">Updating Order Fulfillment Status</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#similarly-for-payment-status">Similarly for Payment Status</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#for-assigning-delivery-agent">For Assigning Delivery Agent</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Becknify</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">What is postbox?</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/source/postbox.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="what-is-postbox">
+<h1>What is postbox?<a class="headerlink" href="#what-is-postbox" title="Link to this heading"></a></h1>
+<p>It is a tiny beckn provider platform (bpp) provisioned for sellers of humbhionline to manage their orders. When an order is placed via humbhionline’s <a class="reference external" href="https://bizlocal.humbhionline.in">bap</a> , 2 Things happen.</p>
+<ol class="arabic simple">
+<li><p>An order is placed on the bpp that hosts the seller.</p>
+<ol class="arabic simple">
+<li><p>For Sellers registered on humbhionline, an order is placed on postbox.humbhionline.in via /confirm beckn call.</p></li>
+<li><p>For Sellers on-boarded via other beckn provider platforms,(bpp), the /confirm is called on their bpp.</p></li>
+</ol>
+</li>
+<li><p>Send a whats app message to the seller.</p></li>
+</ol>
+<p>The what’s app message serves as a notification while the /confirm call serves to persist and manage the orders on a BPP of seller’s choice..</p>
+</section>
+<section id="features-of-postbox">
+<h1>Features of Postbox<a class="headerlink" href="#features-of-postbox" title="Link to this heading"></a></h1>
+<ol class="arabic simple">
+<li><p>OAuth based login with id.humbhionline.in</p></li>
+<li><p>Order persistence via /bpp/confirm beckn call</p>
+<ul class="simple">
+<li><p>Complete Order confirm payloads are persisted and stored as records in <strong>messages</strong> table</p></li>
+<li><p>These messages can be viewed or modified only by people who have permissions</p>
+<ol class="arabic simple">
+<li><p>Seller for whom the message was intended.</p></li>
+<li><p>Delivery Agents assigned on the order.</p></li>
+</ol>
+</li>
+<li><p><a class="reference external" href="https://postbox.humbhionline.in/messages/erd">ERD</a></p></li>
+</ul>
+</li>
+<li><p>Before making any api calls on postbox, an ApiKey needed to be procured by calling the https://id.humbhionline.in/login ( for seller) or https://id.humbhionline.in/partner/sendOtp(For delivery partners)
+<code class="docutils literal notranslate">&#160; <span class="pre">	/login</span>&#160; <span class="pre">		{</span>&#160; <span class="pre">			&quot;Name&quot;</span> <span class="pre">:&quot;&quot;</span> <span class="pre">,</span>&#160; <span class="pre">			&quot;Pasword&quot;</span> <span class="pre">:&quot;&quot;</span>&#160;&#160; <span class="pre">		}</span>&#160; <span class="pre">	/partner/[re]sendOtp</span>&#160; <span class="pre">		{</span>&#160; <span class="pre">			&quot;PhoneNumber&quot;</span> <span class="pre">:</span> <span class="pre">&quot;&quot;</span>&#160;&#160; <span class="pre">		}</span>&#160; <span class="pre">	/partner/validateOtp</span>&#160; <span class="pre">		{</span>&#160; <span class="pre">			&quot;PhoneNumber&quot;</span> <span class="pre">:</span> <span class="pre">&quot;&quot;</span> <span class="pre">,</span> <span class="pre">&quot;Otp&quot;</span> <span class="pre">:</span> <span class="pre">&quot;&quot;</span>&#160;&#160; <span class="pre">		}</span>&#160;  </code>
+<em>The Api Key returned must be passed in subsequent api calls to any of  humbhionline apis as a http request header “ApiKey”</em></p></li>
+<li><p>/messages/save endpoint to update these messages.
+``
+{
+“Message” : {
+“Id” : “” ,
+“Payload” :””
+}
+}</p></li>
+<li><p>/messages/search?q=(“ARCHIVED”:”N”) to list all open orders</p>
+<ul class="simple">
+<li><p>Data accessible by the user will alone be returned.</p></li>
+</ul>
+</li>
+</ol>
+<section id="updating-order-fulfillment-status">
+<h2>Updating Order Fulfillment Status<a class="headerlink" href="#updating-order-fulfillment-status" title="Link to this heading"></a></h2>
+<p>Valid Fulfillment status are:</p>
+<ul class="simple">
+<li><p>Created</p></li>
+<li><p>Preparing</p></li>
+<li><p>Prepared</p></li>
+<li><p>In-Transit</p></li>
+<li><p>Void</p></li>
+<li><p>Completed</p></li>
+<li><p>Cancelled</p></li>
+</ul>
+<p>Payload attribute on a message record is a beckn request and updating fulfillment status can be done in the following way :</p>
+<ol class="arabic simple">
+<li><p>request = JSON.parse(Message.PayLoad);</p></li>
+<li><p>request.message.order.fulfillments0.state.descriptor.code = “whatever you want from the above enums”</p></li>
+<li><p>Message.Payload = JSON.stringify(request);</p></li>
+<li><p>/messages/save as mentioned above.</p></li>
+</ol>
+</section>
+<section id="similarly-for-payment-status">
+<h2>Similarly for Payment Status<a class="headerlink" href="#similarly-for-payment-status" title="Link to this heading"></a></h2>
+<p>Valid Payment Status are :
+PAID
+NOT-PAID</p>
+<p>Similar to Order Fulfillment Status, you can follow step 1..4 replacing step 2 as
+2. request.message.order.payments[0].status = “…”</p>
+</section>
+<section id="for-assigning-delivery-agent">
+<h2>For Assigning Delivery Agent<a class="headerlink" href="#for-assigning-delivery-agent" title="Link to this heading"></a></h2>
+<p>request.message.order.fulfillments[0].agent.contact.phone  = “10 digit mobile phone number of the delivery agent”</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Welcome to Postbox" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Venkatraman Mahadevan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
