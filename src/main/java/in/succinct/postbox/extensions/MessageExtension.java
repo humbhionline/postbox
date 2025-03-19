@@ -48,7 +48,6 @@ public class MessageExtension extends ModelOperationExtension<Message> {
         }
         if (instance.getRawRecord().isNewRecord()) {
             instance.setExpiresAt(System.currentTimeMillis() + instance.getChannel().getExpiryMillis());
-            instance.setOwnerId(instance.getChannel().getCreatorUserId());
         }else if (instance.isDirty()){
             User user = Database.getInstance().getCurrentUser().getRawRecord().getAsProxy(User.class);
             if (!ObjectUtil.isVoid(user.getProviderId())) {
@@ -156,7 +155,9 @@ public class MessageExtension extends ModelOperationExtension<Message> {
     @Override
     protected void beforeDestroy(Message instance) {
         super.beforeDestroy(instance);
-        if (instance.getOwnerId() != Database.getInstance().getCurrentUser().getId()){
+        User user = Database.getInstance().getCurrentUser().getRawRecord().getAsProxy(User.class);
+        
+        if (!instance.getChannel().getName().startsWith(user.getProviderId())){
             throw new RuntimeException("Cannot delete message in some one else's channel.");
         }
     }

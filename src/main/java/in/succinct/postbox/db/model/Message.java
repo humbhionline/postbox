@@ -26,11 +26,6 @@ public interface Message extends Model {
     void setMessageId(String messageId);
     
     
-    @IS_NULLABLE(value = false)
-    Long getOwnerId();
-    void setOwnerId(Long id);
-    User getOwner();
-    
     @IS_NULLABLE(value = true)
     @Index
     String getDeliveryPartnerPhoneNumber();
