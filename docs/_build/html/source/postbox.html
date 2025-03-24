@@ -108,9 +108,25 @@
 <li><p><a class="reference external" href="https://postbox.humbhionline.in/messages/erd">ERD</a></p></li>
 </ul>
 </li>
-<li><p>Before making any api calls on postbox, an ApiKey needed to be procured by calling the https://id.humbhionline.in/login ( for seller) or https://id.humbhionline.in/partner/sendOtp(For delivery partners)
-<code class="docutils literal notranslate">&#160; <span class="pre">	/login</span>&#160; <span class="pre">		{</span>&#160; <span class="pre">			&quot;Name&quot;</span> <span class="pre">:&quot;&quot;</span> <span class="pre">,</span>&#160; <span class="pre">			&quot;Pasword&quot;</span> <span class="pre">:&quot;&quot;</span>&#160;&#160; <span class="pre">		}</span>&#160; <span class="pre">	/partner/[re]sendOtp</span>&#160; <span class="pre">		{</span>&#160; <span class="pre">			&quot;PhoneNumber&quot;</span> <span class="pre">:</span> <span class="pre">&quot;&quot;</span>&#160;&#160; <span class="pre">		}</span>&#160; <span class="pre">	/partner/validateOtp</span>&#160; <span class="pre">		{</span>&#160; <span class="pre">			&quot;PhoneNumber&quot;</span> <span class="pre">:</span> <span class="pre">&quot;&quot;</span> <span class="pre">,</span> <span class="pre">&quot;Otp&quot;</span> <span class="pre">:</span> <span class="pre">&quot;&quot;</span>&#160;&#160; <span class="pre">		}</span>&#160;  </code>
-<em>The Api Key returned must be passed in subsequent api calls to any of  humbhionline apis as a http request header “ApiKey”</em></p></li>
+<li><p>Before making any api calls on postbox, an ApiKey needed to be procured by calling the https://id.humbhionline.in/login ( for seller) or https://id.humbhionline.in/partner/sendOtp(For delivery partners)</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>		<span class="o">/</span><span class="n">login</span>
+			<span class="p">{</span>
+				<span class="s2">&quot;Name&quot;</span> <span class="p">:</span><span class="s2">&quot;&quot;</span> <span class="p">,</span>
+				<span class="s2">&quot;Pasword&quot;</span> <span class="p">:</span><span class="s2">&quot;&quot;</span> 
+			<span class="p">}</span>
+		<span class="o">/</span><span class="n">partner</span><span class="o">/</span><span class="p">[</span><span class="n">re</span><span class="p">]</span><span class="n">sendOtp</span>
+			<span class="p">{</span>
+				<span class="s2">&quot;PhoneNumber&quot;</span> <span class="p">:</span> <span class="s2">&quot;&quot;</span> 
+			<span class="p">}</span>
+		<span class="o">/</span><span class="n">partner</span><span class="o">/</span><span class="n">validateOtp</span>
+			<span class="p">{</span>
+				<span class="s2">&quot;PhoneNumber&quot;</span> <span class="p">:</span> <span class="s2">&quot;&quot;</span> <span class="p">,</span> <span class="s2">&quot;Otp&quot;</span> <span class="p">:</span> <span class="s2">&quot;&quot;</span> 
+			<span class="p">}</span>
+</pre></div>
+</div>
+<p><em>The Api Key returned must be passed in subsequent api calls to any of  humbhionline apis as a http request header “ApiKey”</em></p>
+<ol class="arabic simple" start="4">
 <li><p>/messages/save endpoint to update these messages.
 ``
 {

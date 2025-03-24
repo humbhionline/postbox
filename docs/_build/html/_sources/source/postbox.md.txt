@@ -16,7 +16,8 @@ The what's app message serves as a notification while the /confirm call serves t
 		2. Delivery Agents assigned on the order. 
 	* [ERD](https://postbox.humbhionline.in/messages/erd) 
 3. Before making any api calls on postbox, an ApiKey needed to be procured by calling the https://id.humbhionline.in/login ( for seller) or https://id.humbhionline.in/partner/sendOtp(For delivery partners)
-		```
+
+```
 		/login
 			{
 				"Name" :"" ,
@@ -30,7 +31,8 @@ The what's app message serves as a notification while the /confirm call serves t
 			{
 				"PhoneNumber" : "" , "Otp" : "" 
 			}
-		```
+```
+
 *The Api Key returned must be passed in subsequent api calls to any of  humbhionline apis as a http request header "ApiKey"*
 		
 4. /messages/save endpoint to update these messages. 

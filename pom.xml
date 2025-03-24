@@ -79,6 +79,11 @@
             <version>[2.12,)</version>
         </dependency>
         <dependency>
+            <groupId>com.github.venkatramanm.swf-all</groupId>
+            <artifactId>swf-plugin-audit</artifactId>
+            <version>[2.10,)</version>
+        </dependency>
+        <dependency>
             <groupId>in.succinct</groupId>
             <artifactId>swf-plugin-tailwind</artifactId>
             <version>[1.0-SNAPSHOT,)</version>
