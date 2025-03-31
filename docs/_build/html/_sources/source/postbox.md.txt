@@ -29,7 +29,7 @@ The what's app message serves as a notification while the /confirm call serves t
 			}
 		/partner/validateOtp
 			{
-				"PhoneNumber" : "" , "Otp" : "" 
+				"PhoneNumber" : "" , "OTP" : "" 
 			}
 ```
 
