@@ -1,4 +1,28 @@
 #!/bin/bash 
+
+chkRegistryUp() {
+    registry_url=`cat  overrideProperties/config/networks/*.json  |jq '.base_url'|sed s'/\"//g' `
+
+    echo "Checking status at ${registry_url}" 1>&2
+
+    s=`curl -s -o /dev/null -w "%{response_code}\n" ${registry_url}/ping`
+    if [ "${s}" == "204" ]
+    then
+        s=`curl -s ${registry_url}/status|jq '.router_status'`
+    fi
+    expr $s = '"initialized"'
+}
+
+waitForRegistry() {
+  status=`chkRegistryUp`
+  while [ "$status"  != "1" ]
+  do
+    sleep 10
+    status=`chkRegistryUp`;
+  done
+  echo "Registry is Up"
+}
+
 source ~/.bash_aliases
 bindir=`dirname $0`
 projpath=$bindir/..
@@ -53,6 +77,8 @@ then
 fi
 export separator;
 jars=`bin/refreshjars`
+
+waitForRegistry
 
 nohup nice -19 java -ea:com.venky  -Xmx2g -XX:+PrintGCDetails -Xloggc:$PWD/tmp/gc.log -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/media/heaps/java.hprof -XX:-OmitStackTraceInFastThrow  $DEBUG_OPTS -DPORT=${wport} -Dswf.env=${swf_env} -Dswf.pidfile=$PWD/tmp/pid -Dderby.locks.waitTimeout=10  -DSystem.out.close=${closeStdFd} -DSystem.err.close=${closeStdFd} -DSystem.in.close=${closeStdFd} -cp "overrideProperties/${separator}target/classes/${separator}${jars}target/dependency/*" com.venky.swf.JettyServer &
 
