@@ -50,12 +50,9 @@ public class MessageExtension extends ModelOperationExtension<Message> {
             instance.setExpiresAt(System.currentTimeMillis() + instance.getChannel().getExpiryMillis());
         }else if (instance.isDirty()){
             User user = Database.getInstance().getCurrentUser().getRawRecord().getAsProxy(User.class);
-            if (!ObjectUtil.isVoid(user.getProviderId())) {
-                if (!instance.getChannel().getName().startsWith(user.getProviderId())) {
+            if (!instance.getChannel().getName().startsWith(user.getProviderId()) &&
+                    !ObjectUtil.equals(user.getPhoneNumber(),instance.getDeliveryPartnerPhoneNumber())){
                     throw new RuntimeException("Cannot modify message in some one else's channel.");
-                }
-            }else if (!ObjectUtil.equals(user.getPhoneNumber(),instance.getDeliveryPartnerPhoneNumber())){
-                throw new AccessDeniedException();
             }
             updateOrderStatus(instance);
         }
