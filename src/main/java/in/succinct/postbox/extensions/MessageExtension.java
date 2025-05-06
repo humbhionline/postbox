@@ -49,12 +49,15 @@ public class MessageExtension extends ModelOperationExtension<Message> {
         if (instance.getRawRecord().isNewRecord()) {
             instance.setExpiresAt(System.currentTimeMillis() + instance.getChannel().getExpiryMillis());
         }else if (instance.isDirty()){
-            User user = Database.getInstance().getCurrentUser().getRawRecord().getAsProxy(User.class);
-            if (!instance.getChannel().getName().startsWith(user.getProviderId()) &&
-                    !ObjectUtil.equals(user.getPhoneNumber(),instance.getDeliveryPartnerPhoneNumber())){
+            com.venky.swf.db.model.User currentUser = Database.getInstance().getCurrentUser();
+            if (currentUser != null) {
+                User user = currentUser.getRawRecord().getAsProxy(User.class);
+                if (!instance.getChannel().getName().startsWith(user.getProviderId()) &&
+                        !ObjectUtil.equals(user.getPhoneNumber(), instance.getDeliveryPartnerPhoneNumber())) {
                     throw new RuntimeException("Cannot modify message in some one else's channel.");
+                }
+                updateOrderStatus(instance);
             }
-            updateOrderStatus(instance);
         }
         if (!instance.isArchived()) {
             Registry.instance().callExtensions(Message.class.getSimpleName() + ".archive.check", instance);
