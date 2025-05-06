@@ -20,23 +20,29 @@ import com.venky.swf.views.BytesView;
 import com.venky.swf.views.View;
 import in.succinct.beckn.Acknowledgement;
 import in.succinct.beckn.Acknowledgement.Status;
+import in.succinct.beckn.Agent;
 import in.succinct.beckn.BecknException;
 import in.succinct.beckn.Catalog;
 import in.succinct.beckn.Context;
 import in.succinct.beckn.Descriptor;
 import in.succinct.beckn.Error;
 import in.succinct.beckn.Error.Type;
+import in.succinct.beckn.Fulfillment;
+import in.succinct.beckn.Item;
 import in.succinct.beckn.Location;
 import in.succinct.beckn.Locations;
 import in.succinct.beckn.Order;
 import in.succinct.beckn.Payment.PaymentStatus;
 import in.succinct.beckn.Providers;
+import in.succinct.beckn.Rating;
+import in.succinct.beckn.Rating.RatingCategory;
 import in.succinct.beckn.Request;
 import in.succinct.beckn.Response;
 import in.succinct.beckn.SellerException.GenericBusinessError;
 import in.succinct.beckn.SellerException.InvalidRequestError;
 import in.succinct.beckn.SellerException.InvalidSignature;
 import in.succinct.beckn.Subscriber;
+import in.succinct.beckn.Xinput;
 import in.succinct.onet.core.adaptor.NetworkAdaptor;
 import in.succinct.onet.core.adaptor.NetworkAdaptor.Domain;
 import in.succinct.onet.core.api.MessageLogger;
@@ -216,11 +222,44 @@ public class BppController extends Controller {
                         response.update(tmpResponse);
                     }
                 }else {
+                    Request persisted = new Request(StringUtil.read(message.getPayLoad()));
+                    Order order = persisted.getMessage().getOrder();
+                    
                     if (ObjectUtil.equals(context.getAction(),"status")) {
-                        response =  new Request(StringUtil.read(message.getPayLoad()));
+                        response =  persisted;
                         response.setObjectCreator(networkAdaptor.getObjectCreator(context.getDomain()));
                         response.setContext(new Context(context.toString()));
                         response.getContext().setAction(responseAction);
+                    }else if (ObjectUtil.equals(context.getAction(),"rating")) {
+                        Request ratingRequest = getRequest();
+                        for (Rating rating : ratingRequest.getMessage().getRatings()) {
+                            if (RatingCategory.Order == rating.getRatingCategory()){
+                                order.setRating(rating.getValue());
+                            }else if (RatingCategory.Fulfillment == rating.getRatingCategory()){
+                                for (Fulfillment fulfillment : order.getFulfillments()) {
+                                    if (ObjectUtil.equals(fulfillment.getId(),rating.getId())){
+                                        fulfillment.setRating(rating.getValue());
+                                        break;
+                                    }
+                                }
+                            }else if (RatingCategory.Provider == rating.getRatingCategory()){
+                                order.getProvider().setRating(rating.getValue());
+                            }else if (RatingCategory.Item == rating.getRatingCategory()){
+                                for (Item item : order.getItems().all(rating.getId())) {
+                                    item.setRating(rating.getValue());
+                                }
+                            }
+                        }
+                        message.setPayLoad(new StringReader(persisted.getInner().toString()));
+                        message.save();
+                        
+                        Request tmpResponse = new Request();
+                        tmpResponse.setContext(new Context(context.toString()));
+                        tmpResponse.getContext().setAction(responseAction);
+                        tmpResponse.setMessage(new in.succinct.beckn.Message());
+                        tmpResponse.getMessage().setFeedbackForm(new Xinput());//No additional data required
+                        response = networkAdaptor.getObjectCreator(context.getDomain()).create(Request.class);
+                        response.update(tmpResponse);
                     }else {
                         throw new RuntimeException("Action %s not supported".formatted(action));
                     }
