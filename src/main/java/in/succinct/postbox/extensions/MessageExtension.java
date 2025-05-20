@@ -54,7 +54,7 @@ public class MessageExtension extends ModelOperationExtension<Message> {
                 User user = currentUser.getRawRecord().getAsProxy(User.class);
                 boolean isUserDeliveryPartner = (ObjectUtil.equals(user.getPhoneNumber(), instance.getDeliveryPartnerPhoneNumber()));
                 boolean isUserSeller = (!ObjectUtil.isVoid(user.getProviderId()) && instance.getChannel().getName().startsWith(user.getProviderId()));
-                if (!isUserDeliveryPartner && !isUserSeller)
+                if (!isUserDeliveryPartner && !isUserSeller){
                     throw new RuntimeException("Cannot modify message in some one else's channel.");
                 }
                 updateOrderStatus(instance);
