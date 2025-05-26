@@ -43,9 +43,6 @@ public class NetworkManager {
         return getInstance();
     }
     
-    public String getNetworkId(){
-        return Config.instance().getProperty("in.succinct.onet.name","beckn_open");
-    }
     
     public void subscribe(){
         TaskManager.instance().executeAsync((Task) () ->
@@ -53,7 +50,7 @@ public class NetworkManager {
                         subscribe(getSubscriber()),false);
     }
     public NetworkAdaptor getNetworkAdaptor(){
-        return NetworkAdaptorFactory.getInstance().getAdaptor(getNetworkId());
+        return NetworkAdaptorFactory.getInstance().getAdaptor();
     }
     public Subscriber getSubscriber(){
         String selfKeyId;
@@ -70,7 +67,7 @@ public class NetworkManager {
             setNonce(Base64.getEncoder().encodeToString(String.valueOf(System.currentTimeMillis()).getBytes(StandardCharsets.UTF_8)));
             setSubscriberUrl(Config.instance().getServerBaseUrl() + "/bpp");
             setType(Subscriber.SUBSCRIBER_TYPE_BPP);
-            NetworkAdaptorFactory.getInstance().getAdaptor(getNetworkId()).getSubscriptionJson(this);
+            NetworkAdaptorFactory.getInstance().getAdaptor().getSubscriptionJson(this);
         }};
     }
     public CryptoKey getLatestKey(String purpose){

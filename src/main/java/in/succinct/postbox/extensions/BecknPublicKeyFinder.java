@@ -14,9 +14,6 @@ public class BecknPublicKeyFinder implements Extension {
         Registry.instance().registerExtension("beckn.public.key.get",new BecknPublicKeyFinder());
     }
     
-    public String getNetworkId(){
-        return Config.instance().getProperty("in.succinct.onet.name","beckn_open");
-    }
     @Override
     public void invoke(Object... context) {
         String subscriber_id = (String)context[0];
@@ -32,7 +29,7 @@ public class BecknPublicKeyFinder implements Extension {
         //subscriber.setCountry("IND");
 
 
-        List<Subscriber> responses = NetworkAdaptorFactory.getInstance().getAdaptor(getNetworkId()).
+        List<Subscriber> responses = NetworkAdaptorFactory.getInstance().getAdaptor().
                 lookup(subscriber,true);
 
         if (!responses.isEmpty()){
