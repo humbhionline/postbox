@@ -2,15 +2,16 @@ package in.succinct.postbox.extensions;
 
 import com.venky.cache.UnboundedCache;
 import com.venky.core.io.StringReader;
+import com.venky.core.math.DoubleUtils;
 import com.venky.core.string.StringUtil;
 import com.venky.core.util.Bucket;
 import com.venky.core.util.ObjectUtil;
 import com.venky.extension.Registry;
 import com.venky.swf.db.Database;
+import com.venky.swf.db.annotations.column.ui.mimes.MimeType;
 import com.venky.swf.db.extensions.ModelOperationExtension;
-import com.venky.swf.plugins.background.core.DbTask;
-import com.venky.swf.plugins.background.core.TaskManager;
-import com.venky.swf.plugins.collab.db.model.config.Country;
+import com.venky.swf.integration.api.Call;
+import com.venky.swf.integration.api.InputFormat;
 import com.venky.swf.plugins.collab.db.model.user.Phone;
 import in.succinct.beckn.Address;
 import in.succinct.beckn.Agent;
@@ -18,16 +19,24 @@ import in.succinct.beckn.Billing;
 import in.succinct.beckn.Contact;
 import in.succinct.beckn.Fulfillment;
 import in.succinct.beckn.Fulfillment.FulfillmentStatus;
-import in.succinct.beckn.FulfillmentStop;
-import in.succinct.beckn.FulfillmentStops;
+import in.succinct.beckn.Invoice;
+import in.succinct.beckn.Invoice.Invoices;
+import in.succinct.beckn.Item;
 import in.succinct.beckn.Order;
 import in.succinct.beckn.Order.Status;
+import in.succinct.beckn.Payment;
+import in.succinct.beckn.Payments;
 import in.succinct.beckn.Request;
+import in.succinct.beckn.Subscriber;
 import in.succinct.postbox.db.model.Message;
 import in.succinct.postbox.db.model.SavedAddress;
 import in.succinct.postbox.db.model.User;
 import in.succinct.postbox.util.NetworkManager;
+import org.json.simple.JSONObject;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -44,6 +53,7 @@ public class MessageExtension extends ModelOperationExtension<Message> {
         }
         if (instance.getRawRecord().isNewRecord()) {
             instance.setExpiresAt(System.currentTimeMillis() + instance.getChannel().getExpiryMillis());
+            updateOrderStatus(instance);
         } else if (instance.isDirty()) {
             com.venky.swf.db.model.User currentUser = Database.getInstance().getCurrentUser();
             if (currentUser != null) {
@@ -119,10 +129,56 @@ public class MessageExtension extends ModelOperationExtension<Message> {
                 instance.setDeliveryPartnerPhoneNumber(Phone.sanitizePhoneNumber(contact.getPhone()));
             }
         }
+        Fulfillment fulfillment = order.getFulfillment();
+        Bucket price = new Bucket();
+        for (Item item : order.getItems()) {
+            price.increment(item.getPrice().getValue()*item.getItemQuantity().getSelected().getCount());
+        }
+        Payments terms = order.getPayments();
+        if (terms.size() == 1){
+            Payment term = terms.get(0);
+            term.setFulfillmentId(fulfillment.getId());
+            if (term.getInvoiceEvent() == null){
+                term.setInvoiceEvent(FulfillmentStatus.Completed);
+            }
+            if (!DoubleUtils.equals(term.getParams().getAmount() ,price.doubleValue())){
+                term.getParams().setAmount(price.doubleValue());
+            }
+        }
         
+        List<Invoice> unpaidInvoices = new ArrayList<>();
+        Bucket invoicedAmount = new Bucket();
+        
+        for (Invoice invoice : order.getInvoices()){
+            invoicedAmount.increment(invoice.getAmount());
+            if (invoice.getPaymentTransactions().isEmpty()){
+                unpaidInvoices.add(invoice);
+            }
+        }
+        if (DoubleUtils.compareTo(invoicedAmount.doubleValue(),price.doubleValue()) != 0){
+            // all invoices created.
+            Bucket tbi = new Bucket(price.doubleValue() - invoicedAmount.doubleValue());
+            
+            for (Invoice invoice : unpaidInvoices){
+                double adj = Math.max(-invoice.getAmount(),tbi.doubleValue());
+                invoice.setAmount(invoice.getAmount()+adj);
+                tbi.decrement(adj);
+            }
+            if (DoubleUtils.compareTo(tbi.doubleValue(),0.0D)>0){
+                order.getInvoices().add(new Invoice(){{
+                    setDate(new Date());
+                    setFulfillmentId(fulfillment.getId());
+                    setCurrency(order.getItems().get(0).getPrice().getCurrency());
+                    setAmount(tbi.doubleValue());
+                }});
+                tbi.decrement(tbi.doubleValue());
+            }
+        }
         instance.setPayLoad(new StringReader(request.getInner().toString()));
         
     }
+    
+   
     
     /*
     private void sendOnStatus(Request request) {

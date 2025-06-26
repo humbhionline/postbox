@@ -26,32 +26,10 @@ public class MessageArchiveCheck implements Extension {
         
         Order order = request.getMessage().getOrder();
         if (!order.getStatus().isOpen()){
-            Payments payments = request.getMessage().getOrder().getPayments();
-            Bucket expected = new Bucket();
-            if (order.getStatus().isPaymentRequired()) {
-                for (Item item : order.getItems()) {
-                    expected.increment(item.getItemQuantity().getSelected().getCount() * item.getPrice().getValue());
-                }
-            }
-            
-            Bucket paid  =new Bucket(0);
-            for (Payment p : payments){
-                if (p.getStatus() == PaymentStatus.PAID) {
-                    if (p.getParams() != null && p.getParams().getAmount() > 0){
-                        paid.increment(p.getParams().getAmount());
-                    }else {
-                        paid.decrement(paid.doubleValue());
-                        paid.increment(expected.doubleValue());
-                        break;
-                    }
-                }
-            }
-            message.setArchived(DoubleUtils.compareTo(expected.doubleValue() ,paid.doubleValue())<=0);
+            message.setArchived(order.getStatus().isPaymentRequired() && order.isPaid());
         }else {
             message.setArchived(false);
         }
-        
-        
         
     }
 }

@@ -1,8 +1,11 @@
 package in.succinct.postbox.controller;
 
 import com.venky.core.collections.SequenceSet;
+import com.venky.core.string.StringUtil;
 import com.venky.core.util.ObjectUtil;
 import com.venky.swf.controller.ModelController;
+import com.venky.swf.controller.annotations.RequireLogin;
+import com.venky.swf.controller.annotations.SingleRecordAction;
 import com.venky.swf.db.Database;
 import com.venky.swf.db.model.reflection.ModelReflector;
 import com.venky.swf.integration.api.HttpMethod;
@@ -15,10 +18,16 @@ import com.venky.swf.sql.Expression;
 import com.venky.swf.sql.Operator;
 import com.venky.swf.sql.Select;
 import com.venky.swf.views.View;
+import in.succinct.beckn.Request;
+import in.succinct.beckn.SellerException;
+import in.succinct.events.PaymentStatusEvent;
+import in.succinct.json.JSONAwareWrapper;
 import in.succinct.postbox.db.model.Channel;
 import in.succinct.postbox.db.model.Message;
 import in.succinct.postbox.db.model.User;
+import in.succinct.postbox.util.NetworkManager;
 import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 
 import java.io.InputStreamReader;
 import java.util.Collections;
@@ -142,5 +151,47 @@ public class MessagesController extends ModelController<Message> {
         return list(messageList,maxRecords == Select.MAX_RECORDS_ALL_RECORDS || messageList.size() < maxRecords);
     }
     
+    @SingleRecordAction(icon = "fa-link")
+    public View createPaymentLink(long id){
+        Message message = Database.getTable(getModelClass()).get(id);
+        message.createPaymentLink();
+        return show(id);
+    }
+    
+    /**
+     * new JSONObject() {{
+     *                 put("txn_reference", link.getTxnReference());
+     *                 put("status", link.getStatus());
+     *                 put("active",link.isActive());
+     *                 put("uri", link.getLinkUri());
+     *             }}
+     * @return
+     */
+    
+    @RequireLogin(false)
+    public View updatePayment(){
+        try {
+            String payload = StringUtil.read(getPath().getInputStream());
+            Request request = new Request(payload);
+            if (!request.verifySignature("Authorization",getPath().getHeaders())){
+                throw new SellerException.InvalidSignature();
+            }
+            
+            PaymentStatusEvent event = new PaymentStatusEvent(payload);
+            
+            Message message = Database.getTable(Message.class).newRecord();
+            message.setMessageId(event.getTransactionId());
+            message = Database.getTable(Message.class).getRefreshed(message);
+            if (message.getRawRecord().isNewRecord()){
+                throw new RuntimeException("Cannot identify beckn transaction_id");
+            }
+            message.updatePayment(event);
+            return no_content();
+        }catch (Exception ex){
+            throw new RuntimeException(ex);
+        }
+        
+        
+    }
     
 }

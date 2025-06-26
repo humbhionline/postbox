@@ -9,6 +9,7 @@ import com.venky.swf.db.annotations.column.indexing.Index;
 import com.venky.swf.db.model.Model;
 import com.venky.swf.db.model.User;
 import com.venky.swf.plugins.audit.db.model.AUDITED;
+import in.succinct.events.PaymentStatusEvent;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -52,4 +53,6 @@ public interface Message extends Model {
     public long getExpiresAt();
     public void setExpiresAt(long expiresAt);
 
+    public void createPaymentLink();
+    public void updatePayment(PaymentStatusEvent event);
 }
