@@ -26,7 +26,7 @@ public class MessageArchiveCheck implements Extension {
         
         Order order = request.getMessage().getOrder();
         if (!order.getStatus().isOpen()){
-            message.setArchived(order.getStatus().isPaymentRequired() && order.isPaid());
+            message.setArchived(!order.getStatus().isPaymentRequired() || order.isPaid());
         }else {
             message.setArchived(false);
         }
