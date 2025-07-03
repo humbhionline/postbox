@@ -16,12 +16,16 @@ import com.venky.swf.plugins.collab.db.model.user.Phone;
 import in.succinct.beckn.Address;
 import in.succinct.beckn.Agent;
 import in.succinct.beckn.Billing;
+import in.succinct.beckn.City;
 import in.succinct.beckn.Contact;
+import in.succinct.beckn.Country;
 import in.succinct.beckn.Fulfillment;
 import in.succinct.beckn.Fulfillment.FulfillmentStatus;
+import in.succinct.beckn.FulfillmentStops;
 import in.succinct.beckn.Invoice;
 import in.succinct.beckn.Invoice.Invoices;
 import in.succinct.beckn.Item;
+import in.succinct.beckn.Location;
 import in.succinct.beckn.Order;
 import in.succinct.beckn.Order.Status;
 import in.succinct.beckn.Payment;
@@ -224,26 +228,67 @@ public class MessageExtension extends ModelOperationExtension<Message> {
     private void cacheCustomerAddress(Message instance) {
         Request request = new Request(StringUtil.read(instance.getPayLoad()));
         Billing billing = request.getMessage().getOrder().getBilling();
+        
+        Location customerLocation = getCustomerLocation(request, billing);
+        Address address = customerLocation.getAddress();
         if (billing != null) {
             SavedAddress savedAddress = Database.getTable(SavedAddress.class).newRecord();
-            savedAddress.setName(billing.getName());
             savedAddress.setChannelId(instance.getChannelId());
-            
-            savedAddress.setAreaCode(billing.getPinCode());
+            savedAddress.setName(billing.getName());
             savedAddress.setPhone(billing.getPhone());
-            savedAddress.setCity(billing.getCity().getName());
-            
-            Address address = billing.getAddress();
-            
+
+            if (customerLocation.getCity()!=null) {
+                savedAddress.setCity(customerLocation.getCity().getName());
+            }else if (address.getCity() != null){
+                savedAddress.setCity(address.getCity());
+            }
+            savedAddress.setAreaCode(address.getPinCode());
             savedAddress.setDoor(address.getDoor());
             savedAddress.setBuilding(address.getBuilding());
             savedAddress.setStreet(address.getStreet());
             savedAddress.setLocality(address.getLocality());
             savedAddress.setLandmark(address.getLandmark());
             savedAddress.setWard(address.getWard());
+            if (customerLocation.getGps() != null ){
+                savedAddress.setLat(customerLocation.getGps().getLat());
+                savedAddress.setLng(customerLocation.getGps().getLng());
+            }
             
             savedAddress = Database.getTable(SavedAddress.class).getRefreshed(savedAddress);
             savedAddress.save();
         }
+    }
+    
+    private static Location getCustomerLocation(Request request, Billing billing) {
+        FulfillmentStops stops = request.getMessage().getOrder().getFulfillment().getFulfillmentStops();
+        Location customerLocation = null;
+        if (stops.size() == 2){
+            customerLocation = stops.get(1).getLocation();
+        }else {
+            customerLocation= new Location(){{
+                Address address = billing.getAddress();
+                setAddress(address);
+                if (billing.getCity() != null) {
+                   setCity(billing.getCity());
+                }else if (address != null && address.getCity() != null){
+                   setCity(new City(){{
+                       setName(address.getCity());
+                   }});
+                }
+                if (billing.getCountry() != null) {
+                   setCountry(billing.getCountry());
+                }else if (address != null && address.getCountry() != null){
+                   setCountry(new Country(){{
+                       setName(address.getCountry());
+                   }});
+                }
+                if (billing.getPinCode() != null) {
+                   setAreaCode(billing.getPinCode());
+                }else if (address!= null && address.getPinCode() !=null){
+                   setAreaCode(address.getAreaCode());
+                }
+            }};
+        }
+        return customerLocation;
     }
 }
