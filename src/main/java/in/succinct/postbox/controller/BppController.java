@@ -36,7 +36,10 @@ import in.succinct.beckn.Item;
 import in.succinct.beckn.Location;
 import in.succinct.beckn.Locations;
 import in.succinct.beckn.Order;
+import in.succinct.beckn.Payment;
 import in.succinct.beckn.Payment.PaymentStatus;
+import in.succinct.beckn.Payment.PaymentTransaction;
+import in.succinct.beckn.Payment.PaymentTransaction.PaymentTransactions;
 import in.succinct.beckn.Providers;
 import in.succinct.beckn.Quote;
 import in.succinct.beckn.Rating;
@@ -266,9 +269,32 @@ public class BppController extends Controller {
                         tmpResponse.getMessage().setFeedbackForm(new Xinput());//No additional data required
                         response = networkAdaptor.getObjectCreator(context.getDomain()).create(Request.class);
                         response.update(tmpResponse);
+                    }else if (ObjectUtil.equals(action,"update")) {
+                        Request updateRequest = getRequest();
+                        String target = updateRequest.getMessage().getUpdateTarget();
+                        
+                        if (ObjectUtil.equals(target,"invoices")){
+                            for (Invoice invoice :updateRequest.getMessage().getOrder().getInvoices()){
+                                Invoice persistedInvoice = order.getInvoices().get(invoice.getId());
+                                if (persistedInvoice.getUnpaidAmount().doubleValue() > 0) {
+                                    persistedInvoice.setPaymentTransactions(invoice.getPaymentTransactions());
+                                }
+                            }
+                        }else {
+                            throw new RuntimeException("Action %s not supported for target %s".formatted(action,target));
+                        }
+                        message.setPayLoad(new StringReader(persisted.getInner().toString()));
+                        message.save();
+                        
+                        response = new Request(persisted.getInner().toString());
+                        response.setObjectCreator(networkAdaptor.getObjectCreator(context.getDomain()));
+                        response.getContext().setPayload(context.toString());
+                        response.getContext().setAction(responseAction);
+                        
                     }else {
                         throw new RuntimeException("Action %s not supported".formatted(action));
                     }
+                    
                 }
                 response.setPayload(response.getInner().toString());
                 

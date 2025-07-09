@@ -29,6 +29,7 @@ import in.succinct.beckn.Location;
 import in.succinct.beckn.Order;
 import in.succinct.beckn.Order.Status;
 import in.succinct.beckn.Payment;
+import in.succinct.beckn.Payment.PaymentStatus;
 import in.succinct.beckn.Payments;
 import in.succinct.beckn.Request;
 import in.succinct.beckn.Subscriber;
@@ -67,8 +68,8 @@ public class MessageExtension extends ModelOperationExtension<Message> {
                 if (!isUserDeliveryPartner && !isUserSeller) {
                     throw new RuntimeException("Cannot modify message in some one else's channel.");
                 }
-                updateOrderStatus(instance);
             }
+            updateOrderStatus(instance); // absorb BAP updates
         }
         if (!instance.isArchived()) {
             Registry.instance().callExtensions(Message.class.getSimpleName() + ".archive.check", instance);
@@ -152,13 +153,16 @@ public class MessageExtension extends ModelOperationExtension<Message> {
         
         List<Invoice> unpaidInvoices = new ArrayList<>();
         Bucket invoicedAmount = new Bucket();
+        Bucket unpaidAmount = new Bucket();
         
         for (Invoice invoice : order.getInvoices()){
             invoicedAmount.increment(invoice.getAmount());
             if (invoice.getPaymentTransactions().isEmpty()){
                 unpaidInvoices.add(invoice);
             }
+            unpaidAmount.increment(invoice.getUnpaidAmount().doubleValue());
         }
+        
         if (DoubleUtils.compareTo(invoicedAmount.doubleValue(),price.doubleValue()) != 0){
             // all invoices created.
             Bucket tbi = new Bucket(price.doubleValue() - invoicedAmount.doubleValue());
@@ -167,6 +171,8 @@ public class MessageExtension extends ModelOperationExtension<Message> {
                 double adj = Math.max(-invoice.getAmount(),tbi.doubleValue());
                 invoice.setAmount(invoice.getAmount()+adj);
                 tbi.decrement(adj);
+                invoicedAmount.increment(adj);
+                unpaidAmount.increment(adj);
             }
             if (DoubleUtils.compareTo(tbi.doubleValue(),0.0D)>0){
                 order.getInvoices().add(new Invoice(){{
@@ -175,9 +181,19 @@ public class MessageExtension extends ModelOperationExtension<Message> {
                     setCurrency(order.getItems().get(0).getPrice().getCurrency());
                     setAmount(tbi.doubleValue());
                 }});
+                invoicedAmount.increment(tbi.doubleValue());
+                unpaidAmount.increment(tbi.doubleValue());
                 tbi.decrement(tbi.doubleValue());
             }
         }
+        if (DoubleUtils.compareTo(unpaidAmount.doubleValue() ,0.0) == 0){
+            for (Payment payment : order.getPayments()) {
+                if (!payment.getStatus().isPaid()) {
+                    payment.setStatus(PaymentStatus.PAID);
+                }
+            }
+        }
+        
         instance.setPayLoad(new StringReader(request.getInner().toString()));
         
     }
