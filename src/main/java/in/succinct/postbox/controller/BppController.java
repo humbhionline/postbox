@@ -288,7 +288,7 @@ public class BppController extends Controller {
                         
                         response = new Request(persisted.getInner().toString());
                         response.setObjectCreator(networkAdaptor.getObjectCreator(context.getDomain()));
-                        response.getContext().setPayload(context.toString());
+                        response.getContext().update(context);
                         response.getContext().setAction(responseAction);
                         
                     }else {
