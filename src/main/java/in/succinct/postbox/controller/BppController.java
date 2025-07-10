@@ -286,7 +286,7 @@ public class BppController extends Controller {
                         message.setPayLoad(new StringReader(persisted.getInner().toString()));
                         message.save();
                         
-                        response = new Request(persisted.getInner().toString());
+                        response = new Request(StringUtil.read(message.getPayLoad())); // May get updated in messageExtension. So pick latest.
                         response.setObjectCreator(networkAdaptor.getObjectCreator(context.getDomain()));
                         response.getContext().update(context);
                         response.getContext().setAction(responseAction);
