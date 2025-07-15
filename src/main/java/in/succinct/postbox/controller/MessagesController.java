@@ -207,7 +207,6 @@ public class MessagesController extends ModelController<Message> {
         
     }
     
-    @RequireLogin(false)
     public View refresh(long id){
         Message m  = Database.getTable(getModelClass()).get(id);
             if (m == null || !m.isAccessibleBy(getSessionUser())){
@@ -270,7 +269,7 @@ public class MessagesController extends ModelController<Message> {
         
         String bg = NetworkManager.getInstance().getNetworkAdaptor().getSearchProvider().getSubscriberUrl();
         JSONAware response = new Call<JSONObject>().url(bg,"status").inputFormat(InputFormat.JSON).input(networkRequest.getInner()).
-                header("Content-type","application/json").header("X-CallBackToBeSynchronized","Y").
+                header("Content-type","application/json").header("X-CallBackToBeSynchronized","Y").header("ApiKey",getSessionUser().getApiKey()).
                 getResponseAsJson();
         if (response != null) {
             if (response instanceof JSONArray responses){
