@@ -210,7 +210,7 @@ public class MessagesController extends ModelController<Message> {
     @RequireLogin(false)
     public View refresh(long id){
         Message m  = Database.getTable(getModelClass()).get(id);
-        if (m == null || m.isAccessibleBy(getSessionUser())){
+            if (m == null || !m.isAccessibleBy(getSessionUser())){
             throw new AccessDeniedException();
         }
         Request request = new Request(StringUtil.read(m.getPayLoad()));
