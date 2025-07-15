@@ -7,8 +7,10 @@ import com.venky.swf.controller.ModelController;
 import com.venky.swf.controller.annotations.RequireLogin;
 import com.venky.swf.controller.annotations.SingleRecordAction;
 import com.venky.swf.db.Database;
-import com.venky.swf.db.model.reflection.ModelReflector;
+import com.venky.swf.exceptions.AccessDeniedException;
+import com.venky.swf.integration.api.Call;
 import com.venky.swf.integration.api.HttpMethod;
+import com.venky.swf.integration.api.InputFormat;
 import com.venky.swf.path.Path;
 import com.venky.swf.plugins.background.core.AsyncTaskManagerFactory;
 import com.venky.swf.plugins.background.core.DbTask;
@@ -18,18 +20,29 @@ import com.venky.swf.sql.Expression;
 import com.venky.swf.sql.Operator;
 import com.venky.swf.sql.Select;
 import com.venky.swf.views.View;
+import in.succinct.beckn.Agent;
+import in.succinct.beckn.Context;
+import in.succinct.beckn.Descriptor;
+import in.succinct.beckn.Fulfillment;
+import in.succinct.beckn.Fulfillment.FulfillmentStatus;
+import in.succinct.beckn.FulfillmentState;
+import in.succinct.beckn.Order;
+import in.succinct.beckn.Organization;
 import in.succinct.beckn.Request;
 import in.succinct.beckn.SellerException;
 import in.succinct.events.PaymentStatusEvent;
-import in.succinct.json.JSONAwareWrapper;
+import in.succinct.onet.core.adaptor.NetworkAdaptor.Domain;
+import in.succinct.onet.core.adaptor.NetworkAdaptor.DomainCategory;
 import in.succinct.postbox.db.model.Channel;
 import in.succinct.postbox.db.model.Message;
 import in.succinct.postbox.db.model.User;
 import in.succinct.postbox.util.NetworkManager;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -192,6 +205,94 @@ public class MessagesController extends ModelController<Message> {
         }
         
         
+    }
+    
+    @RequireLogin(false)
+    public View refresh(long id){
+        Message m  = Database.getTable(getModelClass()).get(id);
+        if (m == null || m.isAccessibleBy(getSessionUser())){
+            throw new AccessDeniedException();
+        }
+        Request request = new Request(StringUtil.read(m.getPayLoad()));
+        request.setObjectCreator(NetworkManager.getInstance().getNetworkAdaptor().getObjectCreator(request.getContext().getDomain()));
+        String deliverySubscriber = getDeliverySubscriber(request);
+        Fulfillment fulfillment = request.getMessage().getOrder().getFulfillment();
+        
+        if (!ObjectUtil.isVoid(deliverySubscriber) && fulfillment != null){
+            String txnId = fulfillment.getTag("delivery_order","transaction_id");
+            String orderId = fulfillment.getTag("delivery_order","order_id");
+            if (!ObjectUtil.isVoid(orderId)){
+                Request deliveryStatus = createStatusResponse(txnId,orderId,deliverySubscriber);
+                if (deliveryStatus != null){
+                    Order deliveryOrder = deliveryStatus.getMessage().getOrder();
+                    switch (deliveryOrder.getStatus()){
+                        case Completed -> {
+                            fulfillment.setFulfillmentStatus(FulfillmentStatus.Completed);
+                        }
+                        case In_Transit -> {
+                            fulfillment.setFulfillmentStatus(FulfillmentStatus.In_Transit);
+                        }
+                    }
+                }
+            }
+            m.setPayLoad(new StringReader(request.getInner().toString()));
+            m.save();
+        }
+        
+        return show(m);
+    }
+    
+    private Request createStatusResponse(String txnId, String orderId, String deliverySubscriber) {
+        Domain logistics = null;
+        for (Domain domain : NetworkManager.getInstance().getNetworkAdaptor().getDomains()) {
+            if (domain.getDomainCategory() == DomainCategory.HIRE_TRANSPORT_SERVICE){
+                logistics = domain;
+                break;
+            }
+        }
+        Domain request_domain = logistics;
+        Request request = new Request(){{
+           setContext(new Context(){{
+               setBppId(deliverySubscriber);
+               setTransactionId(txnId);
+               setAction("status");
+               setNetworkId(NetworkManager.getInstance().getNetworkAdaptor().getId());
+               setDomain(request_domain == null ? null : request_domain.getId());
+           }});
+           setMessage(new in.succinct.beckn.Message(){{
+               setOrder(new Order(){{
+                   setId(orderId);
+               }});
+           }});
+        }};
+        Request networkRequest = NetworkManager.getInstance().getNetworkAdaptor().getObjectCreator(request.getContext().getDomain()).create(Request.class);
+        networkRequest.update(request);
+        
+        String bg = NetworkManager.getInstance().getNetworkAdaptor().getSearchProvider().getSubscriberUrl();
+        JSONAware response = new Call<JSONObject>().url(bg,"status").inputFormat(InputFormat.JSON).input(networkRequest.getInner()).
+                header("Content-type","application/json").header("X-CallBackToBeSynchronized","Y").
+                getResponseAsJson();
+        if (response != null) {
+            if (response instanceof JSONArray responses){
+                response = responses.size() != 1 ? null : (JSONObject)responses.get(0);
+            }
+        }
+        if (response != null){
+            Request deliveryResponse = networkRequest.getObjectCreator().create(Request.class);
+            deliveryResponse.setInner((JSONObject) response);
+            return  deliveryResponse;
+        }
+        
+        return null;
+    }
+    
+    private String getDeliverySubscriber(Request request) {
+        Order order =  request.getMessage().getOrder();
+        Fulfillment fulfillment  = order.getFulfillment();
+        Agent agent  = fulfillment == null ? null : fulfillment.getAgent();
+        Organization organization = agent == null ? null : agent.getOrganization();
+        Descriptor descriptor = organization == null ? null : organization.getDescriptor();
+        return descriptor == null ? null : descriptor.getCode();
     }
     
 }
