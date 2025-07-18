@@ -9,9 +9,13 @@ import com.venky.swf.sql.Conjunction;
 import com.venky.swf.sql.Expression;
 import com.venky.swf.sql.Operator;
 import com.venky.swf.sql.Select;
+import com.venky.swf.views.View;
 import in.succinct.postbox.db.model.Channel;
 import in.succinct.postbox.db.model.SavedAddress;
 import in.succinct.postbox.db.model.User;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SavedAddressesController extends ModelController<SavedAddress> {
     public SavedAddressesController(Path path) {
@@ -40,5 +44,16 @@ public class SavedAddressesController extends ModelController<SavedAddress> {
         }
         
         return where;
+    }
+    
+    @Override
+    protected String[] getIncludedFields() {
+        String[] fields =  super.getIncludedFields();
+        if (fields == null){
+            List<String> out = getReflector().getVisibleFields(new ArrayList<>());
+            out.remove("CHANNEL_ID");
+            fields = out.toArray(new String[]{});
+        }
+        return fields;
     }
 }
