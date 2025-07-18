@@ -3,11 +3,13 @@ package in.succinct.postbox.db.model;
 import com.venky.geo.GeoLocation;
 import com.venky.swf.db.annotations.column.IS_NULLABLE;
 import com.venky.swf.db.annotations.column.UNIQUE_KEY;
+import com.venky.swf.db.annotations.model.EXPORTABLE;
 import com.venky.swf.db.model.Model;
 
 public interface SavedAddress extends Model , GeoLocation {
     @IS_NULLABLE(value = false)
     @UNIQUE_KEY
+    @EXPORTABLE(value = false)
     public Long getChannelId();
     public void setChannelId(Long id);
     public Channel getChannel();

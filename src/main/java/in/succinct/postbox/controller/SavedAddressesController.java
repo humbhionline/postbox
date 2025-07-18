@@ -46,14 +46,5 @@ public class SavedAddressesController extends ModelController<SavedAddress> {
         return where;
     }
     
-    @Override
-    protected String[] getIncludedFields() {
-        String[] fields =  super.getIncludedFields();
-        if (fields == null){
-            List<String> out = getReflector().getVisibleFields(new ArrayList<>());
-            out.remove("CHANNEL_ID");
-            fields = out.toArray(new String[]{});
-        }
-        return fields;
-    }
+    
 }
