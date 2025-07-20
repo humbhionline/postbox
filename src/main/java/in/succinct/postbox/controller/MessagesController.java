@@ -35,6 +35,7 @@ import in.succinct.beckn.Organization;
 import in.succinct.beckn.Request;
 import in.succinct.beckn.SellerException;
 import in.succinct.events.PaymentStatusEvent;
+import in.succinct.json.JSONAwareWrapper;
 import in.succinct.onet.core.adaptor.NetworkAdaptor;
 import in.succinct.onet.core.adaptor.NetworkAdaptor.Domain;
 import in.succinct.onet.core.adaptor.NetworkAdaptor.DomainCategory;
@@ -306,8 +307,24 @@ public class MessagesController extends ModelController<Message> {
     }
     
     public View download_orders(){
-        long currentMonthStart  = getCurrentMonthStart();
-        long lastMonthStart = getLastMonthStart();
+        ensureIntegrationMethod(HttpMethod.POST);
+        
+        int numMonths ;
+        boolean includeCurrentMonth ;
+        try {
+            JSONObject input = JSONAwareWrapper.parse(getPath().getInputStream());
+            includeCurrentMonth = getReflector().getJdbcTypeHelper().getTypeRef(boolean.class).getTypeConverter().valueOf(input.getOrDefault("IncludeCurrentMonth",false));
+
+            numMonths = getReflector().getJdbcTypeHelper().getTypeRef(int.class).getTypeConverter().valueOf(input.getOrDefault("NumMonths",0));
+            if (!includeCurrentMonth){
+                numMonths = Math.max(numMonths,1);
+            }
+        }catch (Exception ex){
+            throw new RuntimeException(ex);
+        }
+        
+        long endDate  = includeCurrentMonth ? System.currentTimeMillis() : getCurrentMonthStartDate();
+        long startDate = getOrderReportStartDate(numMonths);
        
         
         Select q = new Select("ID","PAYLOAD").from(getModelClass());
@@ -315,8 +332,8 @@ public class MessagesController extends ModelController<Message> {
         Expression where = getWhereClause();
         where.add(new Expression(q.getPool(),Conjunction.AND).
                 add(new Expression(q.getPool(),"ARCHILVED",Operator.EQ,true)).
-                add(new Expression(q.getPool(),"CREATED_AT",Operator.GE,new Timestamp(lastMonthStart))).
-                add(new Expression(q.getPool(),"CREATED_AT",Operator.LT,new Timestamp(currentMonthStart))));
+                add(new Expression(q.getPool(),"CREATED_AT",Operator.GE,new Timestamp(startDate))).
+                add(new Expression(q.getPool(),"CREATED_AT",Operator.LT,new Timestamp(endDate))));
         
         
         
@@ -367,12 +384,12 @@ public class MessagesController extends ModelController<Message> {
             throw new RuntimeException(e);
         }
         Calendar calendar  = Calendar.getInstance();
-        calendar.setTimeInMillis(lastMonthStart);
+        calendar.setTimeInMillis(startDate);
         
         return new BytesView(getPath(), os.toByteArray(), MimeType.APPLICATION_XLSX, "content-disposition", "attachment; filename=" +  "orders-%d-%d.xlsx".formatted(calendar.get(Calendar.MONTH),calendar.get(Calendar.YEAR)));
     }
     
-    private long getCurrentMonthStart() {
+    private long getCurrentMonthStartDate() {
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(System.currentTimeMillis());
         calendar.set(Calendar.DAY_OF_MONTH,1);
@@ -382,19 +399,21 @@ public class MessagesController extends ModelController<Message> {
         calendar.set(Calendar.MILLISECOND,0);
         return calendar.getTimeInMillis();
     }
-    private long getLastMonthStart() {
-        long monthStart = getCurrentMonthStart();
-        long lastMonthEnd = monthStart - 1L;
-        //Last month end time
-        
+    private long getOrderReportStartDate(int numMonthsToInclude) {
+        long monthStart = getCurrentMonthStartDate();
         
         Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(lastMonthEnd);
-        calendar.set(Calendar.DAY_OF_MONTH,1);
-        calendar.set(Calendar.HOUR,0);
-        calendar.set(Calendar.MINUTE,0);
-        calendar.set(Calendar.SECOND,0);
-        calendar.set(Calendar.MILLISECOND,0);
+        calendar.setTimeInMillis(monthStart);
+        
+        for (int i = 0 ; i < numMonthsToInclude; i ++){
+            calendar.setTimeInMillis(calendar.getTimeInMillis() - 1L);
+            calendar.set(Calendar.DAY_OF_MONTH,1);
+            calendar.set(Calendar.HOUR,0);
+            calendar.set(Calendar.MINUTE,0);
+            calendar.set(Calendar.SECOND,0);
+            calendar.set(Calendar.MILLISECOND,0);
+        }
+        
         return calendar.getTimeInMillis();
     }
 }
