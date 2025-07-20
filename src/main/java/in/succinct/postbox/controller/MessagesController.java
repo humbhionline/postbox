@@ -327,7 +327,7 @@ public class MessagesController extends ModelController<Message> {
         long startDate = getOrderReportStartDate(numMonths);
        
         
-        Select q = new Select("ID","PAYLOAD").from(getModelClass());
+        Select q = new Select("ID","PAY_LOAD").from(getModelClass());
         
         Expression where = getWhereClause();
         where.add(new Expression(q.getPool(),Conjunction.AND).
