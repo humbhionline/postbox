@@ -33,6 +33,9 @@ public interface Order extends Model {
     String getFullfilledAt();
     void setFullfilledAt(String fullfilledAt);
     
+    String getOrderCreatedAt();
+    void setOrderCreatedAt(String orderCreatedAt);
+    
     String getStatus();
     void setStatus(String status);
     

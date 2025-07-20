@@ -14,6 +14,7 @@ import com.venky.swf.integration.api.Call;
 import com.venky.swf.integration.api.HttpMethod;
 import com.venky.swf.integration.api.InputFormat;
 import com.venky.swf.path.Path;
+import com.venky.swf.plugins.audit.db.model.ModelAudit;
 import com.venky.swf.plugins.background.core.AsyncTaskManagerFactory;
 import com.venky.swf.plugins.background.core.DbTask;
 import com.venky.swf.pm.DataSecurityFilter;
@@ -36,6 +37,7 @@ import in.succinct.beckn.Request;
 import in.succinct.beckn.SellerException;
 import in.succinct.events.PaymentStatusEvent;
 import in.succinct.json.JSONAwareWrapper;
+import in.succinct.json.JSONAwareWrapper.JSONAwareWrapperCreator;
 import in.succinct.onet.core.adaptor.NetworkAdaptor;
 import in.succinct.onet.core.adaptor.NetworkAdaptor.Domain;
 import in.succinct.onet.core.adaptor.NetworkAdaptor.DomainCategory;
@@ -370,8 +372,8 @@ public class MessagesController extends ModelController<Message> {
             order.setFulfillmentType(becknOrder.getFulfillment().getType());
             order.setPaymentStatus(becknOrder.getPayments().get(0).getStatus().toString());
             order.setInvoiceAmount(becknOrder.getPayments().get(0).getParams().getAmount());
-            
-            
+            order.setFullfilledAt(m.getReflector().getJdbcTypeHelper().getTypeRef(Timestamp.class).getTypeConverter().toStringISO(getArchivedDate(m)));
+            order.setOrderCreatedAt(m.getReflector().getJdbcTypeHelper().getTypeRef(Timestamp.class).getTypeConverter().toStringISO(m.getCreatedAt()));
             
             
             orders.add(order);
@@ -388,6 +390,37 @@ public class MessagesController extends ModelController<Message> {
         calendar.setTimeInMillis(startDate);
         
         return new BytesView(getPath(), os.toByteArray(), MimeType.APPLICATION_XLSX, "content-disposition", "attachment; filename=" +  "orders-%d-%d.xlsx".formatted(calendar.get(Calendar.MONTH),calendar.get(Calendar.YEAR)));
+    }
+    public Timestamp getArchivedDate(Message m){
+        if (!m.isArchived()){
+            return null;
+        }
+        Select select = new Select().from(ModelAudit.class);
+        select.where(new Expression(select.getPool(),Conjunction.AND).
+                add(new Expression(select.getPool(),"NAME",Operator.EQ,m.getReflector().getModelClass().getSimpleName())).
+                add(new Expression(select.getPool(),"MODEL_ID",Operator.EQ,m.getId())));
+        
+        List<ModelAudit> audits = select.orderBy("ID DESC").execute();
+        Request finalValue = new Request(StringUtil.read(m.getPayLoad()));
+        
+        NetworkAdaptor adaptor = NetworkManager.getInstance().getNetworkAdaptor();
+        JSONAwareWrapperCreator objectCreator  = adaptor.getObjectCreator(finalValue.getContext().getDomain());
+        finalValue.setObjectCreator(objectCreator);
+        
+        for (ModelAudit audit : audits){
+            JSONObject object = JSONAwareWrapper.parse(StringUtil.read(audit.getComment()));
+            JSONObject archivedAudit = (JSONObject) object.get("ARCHIVED");
+            
+            if (archivedAudit != null){
+                String oldValue  = (String) archivedAudit.get("old");
+                String newValue  = (String) archivedAudit.get("new");
+                if (!ObjectUtil.equals(oldValue,newValue) ){
+                    return audit.getCreatedAt();
+                }
+            }
+            
+        }
+        return m.getCreatedAt();
     }
     
     private long getCurrentMonthStartDate() {
