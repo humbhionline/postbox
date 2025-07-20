@@ -8,6 +8,7 @@ import com.venky.swf.controller.ModelController;
 import com.venky.swf.controller.annotations.RequireLogin;
 import com.venky.swf.controller.annotations.SingleRecordAction;
 import com.venky.swf.db.Database;
+import com.venky.swf.db.annotations.column.ui.mimes.MimeType;
 import com.venky.swf.exceptions.AccessDeniedException;
 import com.venky.swf.integration.api.Call;
 import com.venky.swf.integration.api.HttpMethod;
@@ -20,28 +21,39 @@ import com.venky.swf.sql.Conjunction;
 import com.venky.swf.sql.Expression;
 import com.venky.swf.sql.Operator;
 import com.venky.swf.sql.Select;
+import com.venky.swf.views.BytesView;
 import com.venky.swf.views.View;
 import in.succinct.beckn.Agent;
 import in.succinct.beckn.Context;
 import in.succinct.beckn.Descriptor;
 import in.succinct.beckn.Fulfillment;
 import in.succinct.beckn.Fulfillment.FulfillmentStatus;
+import in.succinct.beckn.FulfillmentStop;
+import in.succinct.beckn.FulfillmentStops;
 import in.succinct.beckn.Order;
 import in.succinct.beckn.Organization;
 import in.succinct.beckn.Request;
 import in.succinct.beckn.SellerException;
 import in.succinct.events.PaymentStatusEvent;
+import in.succinct.onet.core.adaptor.NetworkAdaptor;
 import in.succinct.onet.core.adaptor.NetworkAdaptor.Domain;
 import in.succinct.onet.core.adaptor.NetworkAdaptor.DomainCategory;
 import in.succinct.postbox.db.model.Channel;
 import in.succinct.postbox.db.model.Message;
 import in.succinct.postbox.db.model.User;
 import in.succinct.postbox.util.NetworkManager;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -293,4 +305,96 @@ public class MessagesController extends ModelController<Message> {
         return descriptor == null ? null : descriptor.getCode();
     }
     
+    public View download_orders(){
+        long currentMonthStart  = getCurrentMonthStart();
+        long lastMonthStart = getLastMonthStart();
+       
+        
+        Select q = new Select("ID","PAYLOAD").from(getModelClass());
+        
+        Expression where = getWhereClause();
+        where.add(new Expression(q.getPool(),Conjunction.AND).
+                add(new Expression(q.getPool(),"ARCHILVED",Operator.EQ,true)).
+                add(new Expression(q.getPool(),"CREATED_AT",Operator.GE,new Timestamp(lastMonthStart))).
+                add(new Expression(q.getPool(),"CREATED_AT",Operator.LT,new Timestamp(currentMonthStart))));
+        
+        
+        
+                
+        List<Message> records =  q.where(where).orderBy(getReflector().getOrderBy()).execute(getModelClass(),0,getFilter());
+        List<in.succinct.postbox.db.model.Order> orders = new ArrayList<>();
+        NetworkAdaptor  adaptor = NetworkManager.getInstance().getNetworkAdaptor();
+        
+        records.forEach(m->{
+            in.succinct.postbox.db.model.Order order = Database.getTable(in.succinct.postbox.db.model.Order.class).newRecord();
+            
+            Request becknRequest= new Request(StringUtil.read(m.getPayLoad()));
+            becknRequest.setObjectCreator(adaptor.getObjectCreator(becknRequest.getContext().getDomain()));
+            
+            Order becknOrder = becknRequest.getMessage().getOrder();
+            order.setTransactionId(becknRequest.getContext().getTransactionId());
+            order.setEnvironment(becknOrder.getProvider().getTag("network","environment"));
+            FulfillmentStops stops = becknOrder.getFulfillment().getFulfillmentStops();
+            if (stops.size() > 1){
+                FulfillmentStop stop = stops.get(stops.size()-1);
+                order.setCustomerAddress(stop.getLocation().get("address"));
+                order.setCity(stop.getLocation().getCity().getName());
+                order.setPinCode(stop.getLocation().getPinCode());
+                order.setPhoneNumber(stop.getContact().getPhone());
+                
+            }else {
+                order.setCustomerAddress(becknOrder.getBilling().get("address"));
+                order.setCity(becknOrder.getBilling().getCity().getName());
+                order.setPinCode(becknOrder.getBilling().getPinCode());
+                order.setPhoneNumber(becknOrder.getBilling().getPhone());
+            }
+            order.setStatus(becknOrder.getStatus().toString());
+            order.setPaymentType(becknOrder.getPayments().get(0).getInvoiceEvent().toString());
+            order.setPaymentStatus(becknOrder.getPayments().get(0).getStatus().toString());
+            order.setInvoiceAmount(becknOrder.getPayments().get(0).getParams().getAmount());
+            
+            
+            
+            
+            orders.add(order);
+        });
+        Workbook wb = new XSSFWorkbook();
+        super.exportxls(in.succinct.postbox.db.model.Order.class, wb,orders);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        try {
+            wb.write(os);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        Calendar calendar  = Calendar.getInstance();
+        calendar.setTimeInMillis(lastMonthStart);
+        
+        return new BytesView(getPath(), os.toByteArray(), MimeType.APPLICATION_XLSX, "content-disposition", "attachment; filename=" +  "orders-%d-%d.xlsx".formatted(calendar.get(Calendar.MONTH),calendar.get(Calendar.YEAR)));
+    }
+    
+    private long getCurrentMonthStart() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(System.currentTimeMillis());
+        calendar.set(Calendar.DAY_OF_MONTH,1);
+        calendar.set(Calendar.HOUR,0);
+        calendar.set(Calendar.MINUTE,0);
+        calendar.set(Calendar.SECOND,0);
+        calendar.set(Calendar.MILLISECOND,0);
+        return calendar.getTimeInMillis();
+    }
+    private long getLastMonthStart() {
+        long monthStart = getCurrentMonthStart();
+        long lastMonthEnd = monthStart - 1L;
+        //Last month end time
+        
+        
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(lastMonthEnd);
+        calendar.set(Calendar.DAY_OF_MONTH,1);
+        calendar.set(Calendar.HOUR,0);
+        calendar.set(Calendar.MINUTE,0);
+        calendar.set(Calendar.SECOND,0);
+        calendar.set(Calendar.MILLISECOND,0);
+        return calendar.getTimeInMillis();
+    }
 }
