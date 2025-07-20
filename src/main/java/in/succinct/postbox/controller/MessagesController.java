@@ -331,7 +331,7 @@ public class MessagesController extends ModelController<Message> {
         
         Expression where = getWhereClause();
         where.add(new Expression(q.getPool(),Conjunction.AND).
-                add(new Expression(q.getPool(),"ARCHILVED",Operator.EQ,true)).
+                add(new Expression(q.getPool(),"ARCHIVED",Operator.EQ,true)).
                 add(new Expression(q.getPool(),"CREATED_AT",Operator.GE,new Timestamp(startDate))).
                 add(new Expression(q.getPool(),"CREATED_AT",Operator.LT,new Timestamp(endDate))));
         
