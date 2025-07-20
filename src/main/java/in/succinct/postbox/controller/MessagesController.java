@@ -408,19 +408,23 @@ public class MessagesController extends ModelController<Message> {
         finalValue.setObjectCreator(objectCreator);
         
         for (ModelAudit audit : audits){
-            JSONObject object = JSONAwareWrapper.parse(StringUtil.read(audit.getComment()));
-            JSONObject archivedAudit = (JSONObject) object.get("ARCHIVED");
-            
-            if (archivedAudit != null){
-                String oldValue  = (String) archivedAudit.get("old");
-                String newValue  = (String) archivedAudit.get("new");
-                if (!ObjectUtil.equals(oldValue,newValue) ){
-                    return audit.getCreatedAt();
+            try {
+                JSONObject object = JSONAwareWrapper.parse(StringUtil.read(audit.getComment()));
+                JSONObject archivedAudit = (JSONObject) object.get("ARCHIVED");
+                
+                if (archivedAudit != null) {
+                    String oldValue = (String) archivedAudit.get("old");
+                    String newValue = (String) archivedAudit.get("new");
+                    if (!ObjectUtil.equals(oldValue, newValue)) {
+                        return audit.getCreatedAt();
+                    }
                 }
+            }catch (Exception ex){
+                //;
             }
             
         }
-        return m.getCreatedAt();
+        return m.getUpdatedAt();
     }
     
     private long getCurrentMonthStartDate() {
