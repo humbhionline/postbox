@@ -39,6 +39,9 @@ public interface Order extends Model {
     String getPaymentType();
     void setPaymentType(String paymentType);
     
+    String getFulfillmentType();
+    void setFulfillmentType(String fulfillmentType);
+    
     String getPaymentStatus();
     void setPaymentStatus(String paymentStatus);
     

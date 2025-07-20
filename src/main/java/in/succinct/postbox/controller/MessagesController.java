@@ -366,7 +366,8 @@ public class MessagesController extends ModelController<Message> {
                 order.setPhoneNumber(becknOrder.getBilling().getPhone());
             }
             order.setStatus(becknOrder.getStatus().toString());
-            order.setPaymentType(becknOrder.getPayments().get(0).getInvoiceEvent().toString());
+            order.setPaymentType(becknOrder.getPayments().get(0)._getPaymentType());
+            order.setFulfillmentType(order.getFulfillmentType());
             order.setPaymentStatus(becknOrder.getPayments().get(0).getStatus().toString());
             order.setInvoiceAmount(becknOrder.getPayments().get(0).getParams().getAmount());
             
