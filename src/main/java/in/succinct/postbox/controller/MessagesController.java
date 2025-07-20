@@ -329,7 +329,7 @@ public class MessagesController extends ModelController<Message> {
         long startDate = getOrderReportStartDate(numMonths);
        
         
-        Select q = new Select("ID","PAY_LOAD", "ARCHIVED").from(getModelClass());
+        Select q = new Select("ID","PAY_LOAD", "ARCHIVED","CREATED_AT").from(getModelClass());
         
         Expression where = getWhereClause();
         where.add(new Expression(q.getPool(),Conjunction.AND).
