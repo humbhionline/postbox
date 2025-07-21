@@ -11,6 +11,9 @@ public interface Order extends Model {
     @EXPORTABLE(value = false)
     long getId();
     
+    String getMarketedVia();
+    void setMarketedVia(String marketedVia);
+    
     String getTransactionId();
     void setTransactionId(String transactionId);
     

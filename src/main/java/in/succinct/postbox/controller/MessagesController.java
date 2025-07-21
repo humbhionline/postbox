@@ -33,6 +33,7 @@ import in.succinct.beckn.FulfillmentStop;
 import in.succinct.beckn.FulfillmentStops;
 import in.succinct.beckn.Order;
 import in.succinct.beckn.Organization;
+import in.succinct.beckn.Provider.Directories;
 import in.succinct.beckn.Request;
 import in.succinct.beckn.SellerException;
 import in.succinct.events.PaymentStatusEvent;
@@ -353,6 +354,19 @@ public class MessagesController extends ModelController<Message> {
             Order becknOrder = becknRequest.getMessage().getOrder();
             order.setTransactionId(becknRequest.getContext().getTransactionId());
             order.setEnvironment(becknOrder.getProvider().getTag("network","environment"));
+            Directories directories  =becknOrder.getProvider().getDirectories();
+            
+            if (directories.isEmpty()){
+                order.setMarketedVia("Self");
+            }else {
+                Descriptor descriptor = directories.get(0).getDescriptor();
+                if (descriptor == null || ObjectUtil.isVoid(descriptor.getName())){
+                    order.setMarketedVia("Self");
+                }else {
+                    order.setMarketedVia(descriptor.getName());
+                }
+            }
+            
             FulfillmentStops stops = becknOrder.getFulfillment().getFulfillmentStops();
             if (stops.size() > 1){
                 FulfillmentStop stop = stops.get(stops.size()-1);
