@@ -55,4 +55,6 @@ public interface Message extends Model {
 
     public void createPaymentLink();
     public void updatePayment(PaymentStatusEvent event);
+    
+    public void summarize(boolean force);
 }

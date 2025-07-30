@@ -30,6 +30,8 @@ public class MessageArchiveCheck implements Extension {
         }else {
             message.setArchived(false);
         }
-        
+        if (message.isArchived()){
+            message.summarize(true);
+        }
     }
 }
