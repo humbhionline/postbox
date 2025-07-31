@@ -167,9 +167,9 @@ public class MessageImpl extends ModelImpl<Message> {
             order.setCustomerAddress(stop.getLocation().get("address"));
             order.setCity(stop.getLocation().getCity().getName());
             order.setPinCode(stop.getLocation().getPinCode());
-            order.setPhoneNumber(stop.getContact().getPhone());
+            order.setPhoneNumber(stop.getContact() == null ? null : stop.getContact().getPhone());
             
-        }else {
+        }else if (becknOrder.getBilling() != null){
             order.setCustomerAddress(becknOrder.getBilling().get("address"));
             order.setCity(becknOrder.getBilling().getCity().getName());
             order.setPinCode(becknOrder.getBilling().getPinCode());
