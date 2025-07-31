@@ -30,8 +30,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class OrderController extends ModelController<Order> {
-    public OrderController(Path path) {
+public class OrdersController extends ModelController<Order> {
+    public OrdersController(Path path) {
         super(path);
     }
     protected Expression getWhereClause(){
