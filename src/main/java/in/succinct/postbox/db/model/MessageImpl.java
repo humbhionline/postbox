@@ -19,7 +19,6 @@ import in.succinct.beckn.FulfillmentStops;
 import in.succinct.beckn.Invoice;
 import in.succinct.beckn.Order;
 import in.succinct.beckn.Payment;
-import in.succinct.beckn.Payment.Params;
 import in.succinct.beckn.Payment.PaymentStatus;
 import in.succinct.beckn.Payment.PaymentTransaction;
 import in.succinct.beckn.Payment.PaymentTransaction.PaymentTransactions;
@@ -135,7 +134,7 @@ public class MessageImpl extends ModelImpl<Message> {
         order.setMessageId(m.getId());
         order = Database.getTable(in.succinct.postbox.db.model.Order.class).getRefreshed(order);
         if (!order.getRawRecord().isNewRecord() && !force){
-            return order;
+            return;
         }
         
         order.setOrderId(becknOrder.getId());
