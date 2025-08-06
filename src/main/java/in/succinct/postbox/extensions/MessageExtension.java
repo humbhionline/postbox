@@ -175,7 +175,9 @@ public class MessageExtension extends ModelOperationExtension<Message> {
                 unpaidAmount.increment(adj);
             }
             if (DoubleUtils.compareTo(tbi.doubleValue(),0.0D)>0){
+                int invoiceCount = order.getInvoices().size() ;
                 order.getInvoices().add(new Invoice(){{
+                    setId(order.getId() + "-" + (invoiceCount+1));
                     setDate(new Date());
                     setFulfillmentId(fulfillment.getId());
                     setCurrency(order.getItems().get(0).getPrice().getCurrency());
