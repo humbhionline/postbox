@@ -8,50 +8,50 @@ import com.venky.swf.db.model.Model;
 
 public interface SavedAddress extends Model , GeoLocation {
     @IS_NULLABLE(value = false)
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     @EXPORTABLE(value = false)
     public Long getChannelId();
     public void setChannelId(Long id);
     public Channel getChannel();
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     public String getDoor();
     public void setDoor(String door);
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     public String getName();
     public void setName(String name);
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     public String getBuilding();
     public void setBuilding(String building);
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     public String getStreet();
     public void setStreet(String street);
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     public String getLocality();
     public void setLocality(String locality);
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     public String getLandmark();
     public void setLandmark(String landmark);
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     public String getWard();
     public void setWard(String ward);
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     public String getCity();
     public void setCity(String city);
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     public String getAreaCode();
     public void setAreaCode(String areaCode);
     
     
-    @UNIQUE_KEY
+    @UNIQUE_KEY(allowMultipleRecordsWithNull = false)
     String getPhone();
     void setPhone(String phone);
     
