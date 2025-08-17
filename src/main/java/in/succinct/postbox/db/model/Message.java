@@ -9,6 +9,7 @@ import com.venky.swf.db.annotations.column.indexing.Index;
 import com.venky.swf.db.model.Model;
 import com.venky.swf.db.model.User;
 import com.venky.swf.plugins.audit.db.model.AUDITED;
+import com.venky.swf.plugins.audit.db.model.JSONDiff;
 import in.succinct.events.PaymentStatusEvent;
 
 import java.io.InputStream;
@@ -45,6 +46,7 @@ public interface Message extends Model {
     public void setHeaders(String headers);
 
 
+    @JSONDiff
     public Reader  getPayLoad();
     public void setPayLoad(Reader inputStream);
 
