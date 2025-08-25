@@ -4,7 +4,6 @@ import com.venky.core.collections.IgnoreCaseMap;
 import com.venky.core.io.StringReader;
 import com.venky.core.security.Crypt;
 import com.venky.core.string.StringUtil;
-import com.venky.core.util.Bucket;
 import com.venky.core.util.ObjectUtil;
 import com.venky.swf.controller.Controller;
 import com.venky.swf.controller.annotations.RequireLogin;
@@ -16,13 +15,11 @@ import com.venky.swf.plugins.background.core.TaskManager;
 import com.venky.swf.plugins.beckn.tasks.BecknApiCall;
 import com.venky.swf.plugins.beckn.tasks.BecknTask;
 import com.venky.swf.plugins.beckn.tasks.BppTask;
-import com.venky.swf.plugins.collab.db.model.config.Country;
 import com.venky.swf.routing.Config;
 import com.venky.swf.views.BytesView;
 import com.venky.swf.views.View;
 import in.succinct.beckn.Acknowledgement;
 import in.succinct.beckn.Acknowledgement.Status;
-import in.succinct.beckn.Agent;
 import in.succinct.beckn.BecknException;
 import in.succinct.beckn.Catalog;
 import in.succinct.beckn.Context;
@@ -31,17 +28,12 @@ import in.succinct.beckn.Error;
 import in.succinct.beckn.Error.Type;
 import in.succinct.beckn.Fulfillment;
 import in.succinct.beckn.Invoice;
-import in.succinct.beckn.Invoice.Invoices;
 import in.succinct.beckn.Item;
 import in.succinct.beckn.Location;
 import in.succinct.beckn.Locations;
 import in.succinct.beckn.Order;
-import in.succinct.beckn.Payment;
 import in.succinct.beckn.Payment.PaymentStatus;
-import in.succinct.beckn.Payment.PaymentTransaction;
-import in.succinct.beckn.Payment.PaymentTransaction.PaymentTransactions;
 import in.succinct.beckn.Providers;
-import in.succinct.beckn.Quote;
 import in.succinct.beckn.Rating;
 import in.succinct.beckn.Rating.RatingCategory;
 import in.succinct.beckn.Request;
@@ -57,17 +49,16 @@ import in.succinct.onet.core.api.MessageLogger;
 import in.succinct.postbox.db.model.Channel;
 import in.succinct.postbox.db.model.Message;
 import in.succinct.postbox.util.NetworkManager;
+import org.eclipse.jetty.http.HttpStatus;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
 import javax.crypto.KeyAgreement;
 import javax.crypto.SecretKey;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -122,7 +113,7 @@ public class BppController extends Controller {
             if (getPath().getHeader("X-Gateway-Authorization") != null) {
                 headers.put("X-Gateway-Authorization",getPath().getHeader("X-Gateway-Authorization"));
 
-                Subscriber bg = getGatewaySubscriber(request.extractAuthorizationParams("X-Gateway-Authorization",headers));
+                Subscriber bg = getGatewaySubscriber(Request.extractAuthorizationParams("X-Gateway-Authorization",headers));
                 if (bg != null) {
                     request.getExtendedAttributes().set(Request.CALLBACK_URL, bg.getSubscriberUrl());
                 }
@@ -191,7 +182,7 @@ public class BppController extends Controller {
             public Request generateCallBackRequest() {
                 String responseAction = action.startsWith("get_") ? action.substring(4) : "on_" + action;
                 
-                Request response = null ;
+                Request response ;
                 NetworkAdaptor networkAdaptor = NetworkManager.getInstance().getNetworkAdaptor();
                 
                 Context context = getRequest().getContext();
@@ -463,9 +454,9 @@ public class BppController extends Controller {
             @Override
             public void write() throws IOException {
                 if (th instanceof InvalidSignature){
-                    super.write(HttpServletResponse.SC_UNAUTHORIZED);
+                    super.write(HttpStatus.UNAUTHORIZED_401);
                 }else {
-                    super.write(HttpServletResponse.SC_BAD_REQUEST);
+                    super.write(HttpStatus.BAD_REQUEST_400);
                 }
                 //TODO wanto return 200 in 1.0
             }
