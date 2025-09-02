@@ -8,13 +8,11 @@ import com.venky.swf.controller.ModelController;
 import com.venky.swf.controller.annotations.RequireLogin;
 import com.venky.swf.controller.annotations.SingleRecordAction;
 import com.venky.swf.db.Database;
-import com.venky.swf.db.annotations.column.ui.mimes.MimeType;
 import com.venky.swf.exceptions.AccessDeniedException;
 import com.venky.swf.integration.api.Call;
 import com.venky.swf.integration.api.HttpMethod;
 import com.venky.swf.integration.api.InputFormat;
 import com.venky.swf.path.Path;
-import com.venky.swf.plugins.audit.db.model.ModelAudit;
 import com.venky.swf.plugins.background.core.AsyncTaskManagerFactory;
 import com.venky.swf.plugins.background.core.DbTask;
 import com.venky.swf.pm.DataSecurityFilter;
@@ -22,44 +20,32 @@ import com.venky.swf.sql.Conjunction;
 import com.venky.swf.sql.Expression;
 import com.venky.swf.sql.Operator;
 import com.venky.swf.sql.Select;
-import com.venky.swf.views.BytesView;
 import com.venky.swf.views.View;
 import in.succinct.beckn.Agent;
 import in.succinct.beckn.Context;
 import in.succinct.beckn.Descriptor;
 import in.succinct.beckn.Fulfillment;
 import in.succinct.beckn.Fulfillment.FulfillmentStatus;
-import in.succinct.beckn.FulfillmentStop;
-import in.succinct.beckn.FulfillmentStops;
 import in.succinct.beckn.Order;
 import in.succinct.beckn.Organization;
-import in.succinct.beckn.Provider.Directories;
 import in.succinct.beckn.Request;
 import in.succinct.beckn.SellerException;
 import in.succinct.events.PaymentStatusEvent;
-import in.succinct.json.JSONAwareWrapper;
-import in.succinct.json.JSONAwareWrapper.JSONAwareWrapperCreator;
-import in.succinct.onet.core.adaptor.NetworkAdaptor;
 import in.succinct.onet.core.adaptor.NetworkAdaptor.Domain;
 import in.succinct.onet.core.adaptor.NetworkAdaptor.DomainCategory;
 import in.succinct.postbox.db.model.Channel;
 import in.succinct.postbox.db.model.Message;
 import in.succinct.postbox.db.model.User;
 import in.succinct.postbox.util.NetworkManager;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -91,26 +77,75 @@ public class MessagesController extends ModelController<Message> {
             }
         }
     }
+    private View list(boolean archived){
+        Expression where = getWhereClause();
+        where.add(new Expression(getReflector().getPool(),"ARCHIVED",Operator.EQ,archived));
+        
+        Select q = new Select().from(getModelClass());
+        List<Message> records = q.where(where).orderBy(getReflector().getOrderBy()).execute(getModelClass(), Select.MAX_RECORDS_ALL_RECORDS, getFilter());
+        
+        return list(records,true);
+    }
     
+    public View live(){
+        return list(false);
+    }
+    public View history(){
+        return list(true);
+    }
     
+    @Override
+    protected void rewriteQuery(Map<String, Object> formData) {
+        User user = getPath().getSessionUser().getRawRecord().getAsProxy(User.class);
+        if  (user.getId() > 1 && formData.containsKey("q")) {
+            StringBuilder finalFilter = new StringBuilder("(").append(formData.get("q")).append(")");
+            
+            StringBuilder addnlfilter = new StringBuilder();
+            if (!ObjectUtil.isVoid(user.getPhoneNumber())) {
+                addnlfilter.append("(DELIVERY_PARTNER_PHONE_NUMBER:\"%s\")".formatted(user.getPhoneNumber()));
+            }
+            Set<Long> ids = getAccessibleChannelIds();
+            StringBuilder channelFilter = new StringBuilder();
+            for (Long id : ids){
+                if (!channelFilter.isEmpty()){
+                    channelFilter.append(" OR ");
+                }
+                channelFilter.append("CHANNEL_ID:%d".formatted(id));
+            }
+            if (!channelFilter.isEmpty()){
+                addnlfilter.append(" OR (").append(channelFilter).append(")");
+            }
+            if (!addnlfilter.isEmpty()){
+                finalFilter.append(" AND (").append(addnlfilter).append(")");
+            }
+            formData.put("q",finalFilter.toString());
+        }
+        super.rewriteQuery(formData);
+    }
+    private Set<Long> getAccessibleChannelIds(){
+        User user = getPath().getSessionUser().getRawRecord().getAsProxy(User.class);
+        if  (user.getId() > 1) {
+            String providerId = user.getProviderId();
+            if (!ObjectUtil.isVoid(providerId)) {
+                Select select = new Select("ID").from(Channel.class);
+                select.where(new Expression(select.getPool(), "NAME", Operator.LK,
+                        getPath().getSessionUser().getRawRecord().getAsProxy(User.class).getProviderId() + "%"));
+                return DataSecurityFilter.getIds(select.execute());
+            }
+        }
+        return new SequenceSet<>();
+    }
     protected Expression getWhereClause(){
         
         Expression where = super.getWhereClause();
         User user = getPath().getSessionUser().getRawRecord().getAsProxy(User.class);
         if  (user.getId() > 1) {
             Expression addl = new Expression(getReflector().getPool(), Conjunction.OR);
-            
-            String providerId = user.getProviderId();
-            if (!ObjectUtil.isVoid(providerId)) {
-                Select select = new Select().from(Channel.class);
-                select.where(new Expression(select.getPool(), "NAME", Operator.LK,
-                        getPath().getSessionUser().getRawRecord().getAsProxy(User.class).getProviderId() + "%"));
-                SequenceSet<Long> ids = DataSecurityFilter.getIds(select.execute());
-                if (!ids.isEmpty()) {
-                    addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.IN, ids.toArray()));
-                } else {
-                    addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.EQ));
-                }
+            Set<Long> channelIds = getAccessibleChannelIds();
+            if (!channelIds.isEmpty()){
+                addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.IN, channelIds.toArray()));
+            }else {
+                addl.add(new Expression(getReflector().getPool(), "CHANNEL_ID", Operator.EQ));
             }
             if (!ObjectUtil.isVoid(user.getPhoneNumber())) {
                 addl.add(new Expression(getReflector().getPool(), "DELIVERY_PARTNER_PHONE_NUMBER", Operator.EQ, user.getPhoneNumber()));

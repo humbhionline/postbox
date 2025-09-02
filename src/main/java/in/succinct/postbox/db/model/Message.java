@@ -18,6 +18,7 @@ import java.io.Reader;
 @AUDITED
 public interface Message extends Model {
 
+    @Index
     @IS_NULLABLE(value = false)
     public Long getChannelId();
     public void setChannelId(Long id);
