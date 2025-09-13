@@ -1,0 +1,10 @@
+{
+  "core_version" : "0.9.4",
+  "registry_id": "id.test.net",
+  "search_provider_id" : "search.test.net",
+  "self_registration_supported": true,
+  "subscription_needed_post_registration" : true,
+  "base_url": "http://id.test.net",
+  "registry_url" : "http://id.test.net/subscribers",
+  "extension_package": "in.succinct.beckn.boc"
+}
