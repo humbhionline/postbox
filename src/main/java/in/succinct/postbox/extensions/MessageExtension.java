@@ -8,10 +8,7 @@ import com.venky.core.util.Bucket;
 import com.venky.core.util.ObjectUtil;
 import com.venky.extension.Registry;
 import com.venky.swf.db.Database;
-import com.venky.swf.db.annotations.column.ui.mimes.MimeType;
 import com.venky.swf.db.extensions.ModelOperationExtension;
-import com.venky.swf.integration.api.Call;
-import com.venky.swf.integration.api.InputFormat;
 import com.venky.swf.plugins.collab.db.model.user.Phone;
 import in.succinct.beckn.Address;
 import in.succinct.beckn.Agent;
@@ -23,7 +20,6 @@ import in.succinct.beckn.Fulfillment;
 import in.succinct.beckn.Fulfillment.FulfillmentStatus;
 import in.succinct.beckn.FulfillmentStops;
 import in.succinct.beckn.Invoice;
-import in.succinct.beckn.Invoice.Invoices;
 import in.succinct.beckn.Item;
 import in.succinct.beckn.Location;
 import in.succinct.beckn.Order;
@@ -32,12 +28,9 @@ import in.succinct.beckn.Payment;
 import in.succinct.beckn.Payment.PaymentStatus;
 import in.succinct.beckn.Payments;
 import in.succinct.beckn.Request;
-import in.succinct.beckn.Subscriber;
 import in.succinct.postbox.db.model.Message;
-import in.succinct.postbox.db.model.SavedAddress;
 import in.succinct.postbox.db.model.User;
 import in.succinct.postbox.util.NetworkManager;
-import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -240,73 +233,7 @@ public class MessageExtension extends ModelOperationExtension<Message> {
     @Override
     protected void afterSave(Message instance) {
         super.afterSave(instance);
-        cacheCustomerAddress(instance);
     }
     
-    private void cacheCustomerAddress(Message instance) {
-        Request request = new Request(StringUtil.read(instance.getPayLoad()));
-        Billing billing = request.getMessage().getOrder().getBilling();
-        
-        Location customerLocation = getCustomerLocation(request, billing);
-        Address address = customerLocation.getAddress();
-        if (billing != null) {
-            SavedAddress savedAddress = Database.getTable(SavedAddress.class).newRecord();
-            savedAddress.setChannelId(instance.getChannelId());
-            savedAddress.setName(billing.getName());
-            savedAddress.setPhone(billing.getPhone());
-
-            if (customerLocation.getCity()!=null) {
-                savedAddress.setCity(customerLocation.getCity().getName());
-            }else if (address.getCity() != null){
-                savedAddress.setCity(address.getCity());
-            }
-            savedAddress.setAreaCode(address.getPinCode());
-            savedAddress.setDoor(address.getDoor());
-            savedAddress.setBuilding(address.getBuilding());
-            savedAddress.setStreet(address.getStreet());
-            savedAddress.setLocality(address.getLocality());
-            savedAddress.setLandmark(address.getLandmark());
-            savedAddress.setWard(address.getWard());
-            if (customerLocation.getGps() != null ){
-                savedAddress.setLat(customerLocation.getGps().getLat());
-                savedAddress.setLng(customerLocation.getGps().getLng());
-            }
-            
-            savedAddress = Database.getTable(SavedAddress.class).getRefreshed(savedAddress);
-            savedAddress.save();
-        }
-    }
     
-    private static Location getCustomerLocation(Request request, Billing billing) {
-        FulfillmentStops stops = request.getMessage().getOrder().getFulfillment().getFulfillmentStops();
-        Location customerLocation = null;
-        if (stops.size() == 2){
-            customerLocation = stops.get(1).getLocation();
-        }else {
-            customerLocation= new Location(){{
-                Address address = billing.getAddress();
-                setAddress(address);
-                if (billing.getCity() != null) {
-                   setCity(billing.getCity());
-                }else if (address != null && address.getCity() != null){
-                   setCity(new City(){{
-                       setName(address.getCity());
-                   }});
-                }
-                if (billing.getCountry() != null) {
-                   setCountry(billing.getCountry());
-                }else if (address != null && address.getCountry() != null){
-                   setCountry(new Country(){{
-                       setName(address.getCountry());
-                   }});
-                }
-                if (billing.getPinCode() != null) {
-                   setAreaCode(billing.getPinCode());
-                }else if (address!= null && address.getPinCode() !=null){
-                   setAreaCode(address.getAreaCode());
-                }
-            }};
-        }
-        return customerLocation;
-    }
 }

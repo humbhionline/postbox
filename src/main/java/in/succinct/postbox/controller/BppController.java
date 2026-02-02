@@ -48,6 +48,7 @@ import in.succinct.onet.core.adaptor.NetworkAdaptor.Domain;
 import in.succinct.onet.core.api.MessageLogger;
 import in.succinct.postbox.db.model.Channel;
 import in.succinct.postbox.db.model.Message;
+import in.succinct.postbox.db.model.User;
 import in.succinct.postbox.util.NetworkManager;
 import org.eclipse.jetty.http.HttpStatus;
 import org.json.simple.JSONObject;
@@ -116,6 +117,13 @@ public class BppController extends Controller {
                 Subscriber bg = getGatewaySubscriber(Request.extractAuthorizationParams("X-Gateway-Authorization",headers));
                 if (bg != null) {
                     request.getExtendedAttributes().set(Request.CALLBACK_URL, bg.getSubscriberUrl());
+                }
+            }
+            if (getPath().getHeader("ApiKey") != null){
+                headers.put("ApiKey",getPath().getHeader("ApiKey"));
+                User owner = getPath().getSessionUser().getRawRecord().getAsProxy(User.class);
+                if (owner != null){
+                    headers.put("user.id",String.valueOf(owner.getId()));
                 }
             }
             Config.instance().getLogger(getClass().getName()).log(Level.INFO,request.toString());
